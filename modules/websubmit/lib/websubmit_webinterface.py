@@ -61,12 +61,13 @@ import invenio.template
 webstyle_templates = invenio.template.load('webstyle')
 websearch_templates = invenio.template.load('websearch')
 
-from invenio.websubmit_engine import home, action, interface, endaction, makeCataloguesTable
+from invenio.websubmit_engine import home, action, interface, endaction, makeCataloguesTable, get_authors_from_allowed_sources
 
 class WebInterfaceSubmitPages(WebInterfaceDirectory):
 
     _exports = ['summary', 'sub', 'direct', '', 'attachfile', 'uploadfile', \
-                'getuploadedfile', 'upload_video', ('continue', 'continue_')]
+                'getuploadedfile', 'upload_video', \
+                'get_author_list', ('continue', 'continue_')]
 
     def uploadfile(self, req, form):
         """
@@ -943,6 +944,19 @@ class WebInterfaceSubmitPages(WebInterfaceDirectory):
     # Answer to both /submit/ and /submit
     __call__ = index
 
+
+    def get_author_list(self,req,form):
+##        args = str(req.args)
+##
+        argd = wash_urlargd(form, {
+         'doctype': (str,''),
+         'indir' : (str,''),
+         'access' : (str, ''),
+         'author' : (str, '')
+         })
+        result = get_authors_from_allowed_sources(req,argd["author"], argd['indir'], argd['doctype'], argd['access'])
+
+        return json.dumps(result[0])
 
 ## def retrieve_most_recent_attached_file(file_path):
 ##     """

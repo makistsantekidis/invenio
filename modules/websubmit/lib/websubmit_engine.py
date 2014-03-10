@@ -57,6 +57,7 @@ from invenio.errorlib import register_exception
 from invenio.urlutils import make_canonical_urlargd, redirect_to_url
 from invenio.websubmitadmin_engine import string_is_alphanumeric_including_underscore
 from invenio.htmlutils import get_mathjax_header
+from invenio.pluginutils import PluginContainer
 
 from invenio.websubmit_dblayer import \
      get_storage_directory_of_action, \
@@ -538,6 +539,8 @@ def interface(req,
             try:
                 co = compile (full_field ['htmlcode'].replace("\r\n","\n"), "<string>", "exec")
                 the_globals['text'] = ''
+                the_globals['indir'] = indir
+                the_globals['element'] = { "name" : full_field['name'], "value" : None }
                 exec co in the_globals
                 text = the_globals['text']
             except:
@@ -1852,3 +1855,46 @@ def log_function(curdir, message, start_time, filename="function_log"):
         fd = open("%s/%s" % (curdir, filename), "a+")
         fd.write("""%s --- %s\n""" % (message, time_lap))
         fd.close()
+
+def prepare_author_sources(curdir, sources):
+    f = open('%s/author_sources' % curdir,'w')
+    f.write('\n'.join(sources) + '\n')
+    f.close()
+
+def get_author_autocompletion_form(element, indir, doctype, access):
+    return websubmit_templates.tmpl_authors_autocompletion(element, indir, doctype, access)
+
+def get_authors_from_allowed_sources(req, author_string, indir, doctype, access, ln=CFG_SITE_LANG):
+    _ = gettext_set_language(ln)
+    authors_type = None
+    def plugin_builder_function(plugin_name, plugin_code):
+        ret = {}
+        source_name = getattr(plugin_code,"CFG_SOURCE_NAME",None)
+        query_function = getattr(plugin_code,"query_author_source",None)
+        ret["source_name"] = source_name
+        ret["query_function"] = query_function
+        return ret
+
+    from invenio.websubmit_functions.Shared_Functions import ParamFromFile
+    author_sources = ParamFromFile(os.path.join(CFG_WEBSUBMIT_STORAGEDIR, indir, doctype, access, 'author_sources'))
+    sources = author_sources.split("\n")
+    user_info = collect_user_info(req)
+    SuE = ParamFromFile(os.path.join(CFG_WEBSUBMIT_STORAGEDIR, indir, doctype, access, 'SuE'))
+    email = user_info['email'] # get email from req
+    if email != SuE:
+        return [[],"Not Authorized"]
+
+    result = []
+    author_sources_plugins = PluginContainer(
+    os.path.join(CFG_PYLIBDIR,
+                 'invenio', 'websubmit_author_sources_plugins', '*.py'),
+    plugin_builder_function)
+    for source in sources:
+        source = source.rstrip()
+        if author_sources_plugins.has_key(str(source)):
+            try:
+                result.extend(author_sources_plugins[source]['query_function'](author_string))
+            except:
+                register_exception(req=req, alert_admin=True, prefix="Error in executing plugin %s with globals %s" % (pprint.pformat(source), pprint.pformat(the_globals)))
+                raise
+    return result

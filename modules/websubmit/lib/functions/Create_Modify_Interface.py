@@ -247,6 +247,10 @@ def Create_Modify_Interface(parameters, curdir, form, user_info=None):
         if date_conversion_setting != 'none':
             # If field is a date value, transform date into format DD/MM/YYYY:
             value = Create_Modify_Interface_transform_date(value)
+            ff = open("/tmp/skalalalalala","w")
+            ff.write(str(value)+ "\n")
+            ff.write(str(marccode)+"\n")
+            ff.write(str(field)+"\n")
         res = run_sql("SELECT * FROM sbmFIELDDESC WHERE name=%s", (field,))
         if len(res) > 0:
             element_type = res[0][3]
@@ -306,6 +310,7 @@ def Create_Modify_Interface(parameters, curdir, form, user_info=None):
                     ## Create_Modify_Interface has already been parsed by
                     ## execfile within a protected environment.
                     the_globals['text'] = ''
+                    the_globals['element'] = {"name" : field , "value": value }
                     exec co in the_globals
                     text = the_globals['text']
                 except:
