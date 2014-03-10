@@ -2898,6 +2898,142 @@ class Template:
          'help-label': escape_javascript_string(_("Use '\\$' delimiters to write LaTeX markup. Eg: \\$e=mc^{2}\\$")),
          }
 
+    def tmpl_authors_autocompletion(self, element, indir, doctype, access):
+        # _ = gettext_set_language(ln)
+        ## <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+                return '''<tr><td style="font-size:small;">To add custom Authors use the format: <br> <i>Lastname, Firstname: Affiliation </i></td></tr>
+                 <tr>
+                 <td valign="top" style="width:20%%;">
+                 <input style="width:300px; background-color: rgb(255, 255, 255);" id="author_textbox" placeholder="Type to find authors" name="add_author" class="typeahead"/>
+                 </td>
+                 <td>
+                 <button align="left" valign="top" onclick="AppendAuthorToAuthorHiddenInput()">Add Author</button>
+                 <td/>
+                 </tr>
+                 </tbody></table>
+                 <table id="websubmit_authors_table"><tbody id="websubmit_authors_tbody">
+                 <tr><th>Last name</th><th>First name</th><th>Affiliation</th></tr>
+                 </tbody></table>
+                 <table><tbody>
+                 <tr>
+                 <td>
+                <input type="hidden" id="authors_input" name="%(name)s"  value="%(value)s"/>
+                <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.3.0/handlebars.min.js"></script>
+                <script type="text/javascript" src="http://twitter.github.io/typeahead.js/releases/latest/typeahead.bundle.js"></script>
+                <script>
+
+                var authors = {};
+                var authorindex = 0;
+
+                function format_author_entry(firstname,lastname,affiliation){
+                return lastname + ", " + firstname + ": " + affiliation;
+                }
+
+
+                function AppendAuthorToAuthorHiddenInput(object,datum){
+                    if (typeof datum === "undefined"){
+                    if (typeof document.getElementById('author_textbox').value === "undefined") return;
+                    datum = {};
+                    author_textbox = document.getElementById('author_textbox').value
+                    datum['lastname'] = author_textbox.split(',')[0]
+                    datum['firstname'] = author_textbox.split(',')[1].split(':')[0].replace(' ','')
+                    datum['affiliation'] = author_textbox.split(':')[1].replace(' ','')
+                    }
+                    var entry = format_author_entry(datum['firstname'],datum['lastname'],datum['affiliation']);
+                    if (document.getElementById('authors_input').value.indexOf(entry) == -1){
+                    authors[++authorindex] = datum
+                    appendRow(datum['firstname'],datum['lastname'],datum['affiliation'],authorindex);
+                    }
+                    $('#author_textbox').val("");
+                }
+
+                function appendRow(Name,Surname,affiliation,index) {
+                    newRow = "<tr class='websubmit_authors_tr'>" +
+                        "<td class='websubmit_authors_td'>" + Surname + "</td>" +
+                        "<td class='websubmit_authors_td'>" + Name + "</td>" +
+                        "<td class='websubmit_authors_td'>" + affiliation + "</td>" +
+                        "<td class='websubmit_authors_td'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></td>" +
+                        "<td style='display:none;' id= 'entry_info'></td>" +
+                        "</tr>";
+                   $('#websubmit_authors_table > tbody:last').append(newRow);
+                   $('#websubmit_authors_table > tbody > tr:last').slideDown('slow');
+                    exportAuthorsToTextarea();
+                }
+
+                function delete_author(e,index)
+                {
+                       e.parentNode.parentNode.parentNode.removeChild(e.parentNode.parentNode);
+                       delete authors[index]
+                       $('#author_textbox').val("");
+                       exportAuthorsToTextarea();
+                }
+
+                function checkAuthorExistence(datum){
+                    for (var key in authors) {
+                        subkeys = Object.keys(authors[key])
+                        identical = true;
+                        for (var subkey in subkeys){
+                            if (author[key][subkey] != datum[subkey]){
+                                identical = false;
+                            }
+                        }
+                        if (identical) return true
+                    }
+                    return false
+                }
+
+                function dispkey(suggestion_object){
+                console.log(suggestion_object);
+                return suggestion_object["lastname"] + ", " + suggestion_object["firstname"] + ": " + suggestion_object["affiliation"] ;
+                }
+
+                function exportAuthorsToTextarea(){
+                    document.getElementById('authors_input').value = "";
+                    for (var key in authors) {
+                        document.getElementById('authors_input').value += format_author_entry(authors[key]['firstname'],authors[key]['lastname'],authors[key]['affiliation']) + "\\r\\n";
+                    }
+                }
+                var engine = new Bloodhound({
+                    name: 'authors',
+                    local: [],
+                    remote: 'http://pcuds55.cern.ch/submit/get_author_list?author=%%QUERY&indir=%(indir)s&doctype=%(doctype)s&access=%(access)s',
+                    datumTokenizer: function(d) {
+                        console.log("ASDASDASDASDASDASD");console.log(d);
+                        tokens = []
+                        tokens.push(Bloodhound.tokenizers.whitespace(d['lastname']));
+                        tokens.push(Bloodhound.tokenizers.whitespace(d['firstname']));
+                        tokens.push(d['affiliation'])
+                        tokens.push(d['email'])
+                        return tokens;
+                    },
+                    queryTokenizer: function (s){
+                        return s.split(/[ ,:]+/);
+                    },
+                    //Bloodhound.tokenizers.whitespace
+                    });
+
+                engine.initialize();
+                $('.typeahead').typeahead({
+                    highlight: true,
+                    hint: true,
+                    minLength: 3,
+                },
+                {
+                displayKey: dispkey,
+                templates: {
+                   suggestion: Handlebars.compile([
+                '<p id="author_autocomplete_email_field" >{{email}}</p>',
+                '<p id="author_autocomplete_name_field">{{lastname}} {{firstname}}</p>',
+                '<p id="author_autocomplete_affiliation_field">{{affiliation}}</p>'
+                ].join(''))},
+                source: engine.ttAdapter(),
+                });
+                $('#author_textbox').on('typeahead:selected', AppendAuthorToAuthorHiddenInput);
+                $('#author_textbox').on('typeahead:closed',null);
+                $("#author_textbox").css("background-color","rgba(255,255,255,255)");
+                </script>''' % {"name": element['name'], "indir": indir, "doctype": doctype, "access": access, "value" : element['value']}
+
+
 def displaycplxdoc_displayauthaction(action, linkText):
     return """ <strong class="headline">(<a href="" onclick="document.forms[0].action.value='%(action)s';document.forms[0].submit();return false;">%(linkText)s</a>)</strong>""" % {
         "action" : action,
