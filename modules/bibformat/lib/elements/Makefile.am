@@ -31,6 +31,7 @@ pylib_DATA = __init__.py \
 	bfe_authority_author_publications.py \
 	bfe_authority_institute.py \
 	bfe_authority_journal.py \
+	bfe_authority_links.py \
 	bfe_authority_subject.py \
 	bfe_authors_parent.py \
 	bfe_authors.py \

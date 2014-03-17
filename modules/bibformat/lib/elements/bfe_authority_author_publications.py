@@ -31,8 +31,6 @@ from invenio.bibauthority_engine import \
 
 from invenio.search_engine import get_fieldvalues
 
-
-
 CFG_BIBAUTHORITY_PUBLICATION_VIEW_LIMIT = 10
 __revision__ = "$Id$"
 
@@ -50,6 +48,7 @@ def format_element(bfo):
     control_nos = [d['a'] for d in bfo.fields('035__')]
     control_nos = filter(None, control_nos) # fastest way to remove empty ""s
     previous_recIDs = []
+    parameters = []
     publications_formatted = []
     for control_no in control_nos:
 #        recIDs = []
@@ -58,6 +57,8 @@ def format_element(bfo):
 #        control_nos = [(type + CFG_BIBAUTHORITY_PREFIX_SEP + control_no) for type in types]
 #        for control_no in control_nos:
 #            recIDs.extend(list(search_pattern(p='"' + control_no + '"')))
+        for ctrl_number_field_numbers in CFG_BIBAUTHORITY_RECORD_AUTHOR_CONTROL_NUMBER_FIELDS:
+            parameters.append(ctrl_number_field_numbers + ":" + control_no)
         recIDs = [x for x in get_dependent_records_for_control_no(control_no) if x not in previous_recIDs]
         count = len(recIDs)
         count_string = str(count) + " dependent records"
@@ -71,15 +72,19 @@ def format_element(bfo):
             if count > CFG_BIBAUTHORITY_PUBLICATION_VIEW_LIMIT:
                 titles = get_fieldvalues(recIDs[:CFG_BIBAUTHORITY_PUBLICATION_VIEW_LIMIT],"245__a")
                 for i in xrange(CFG_BIBAUTHORITY_PUBLICATION_VIEW_LIMIT):
-                    url_str = "/record/"+ str(recIDs[i])
-                    prefix = prefix_pattern % url_str
-                    publications_formatted.append(prefix + titles[i] + postfix)
+                    title = get_fieldvalues(recIDs[i],"245__a")
+                    if title:
+                        url_str = "/record/"+ str(recIDs[i])
+                        prefix = prefix_pattern % url_str
+                        publications_formatted.append(prefix + title[0] + postfix)
             else:
                 titles = get_fieldvalues(recIDs,"245__a")
                 for i in xrange(len(recIDs)):
-                    url_str = "/record/"+ str(recIDs[i])
-                    prefix = prefix_pattern % url_str
-                    publications_formatted.append(prefix + titles[i] + postfix)
+                    title = get_fieldvalues(recIDs[i],"245__a")
+                    if title:
+                        url_str = "/record/"+ str(recIDs[i])
+                        prefix = prefix_pattern % url_str
+                        publications_formatted.append(prefix + title[0] + postfix)
 
     title = "<strong>" + _("Publication(s)") + "</strong>"
     if publications_formatted:
@@ -87,10 +92,7 @@ def format_element(bfo):
     else:
         content = "<strong style='color:red'>Missing !</strong>"
 
-    parameters = []
-    for ctrl_number_field_numbers in CFG_BIBAUTHORITY_RECORD_AUTHOR_CONTROL_NUMBER_FIELDS:
-        parameters.append(ctrl_number_field_numbers + ":" + control_no)
-        p_val = quote(" or ".join(parameters))
+    p_val = quote(" or ".join(parameters))
         # include "&c=" parameter for bibliographic records
         # and one "&c=" parameter for authority records
     url_str = \

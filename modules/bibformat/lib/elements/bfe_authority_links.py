@@ -29,21 +29,9 @@ from invenio.bibauthority_engine import \
     get_low_level_recIDs_from_control_no, \
     get_dependent_records_for_control_no
 
+from invenio.viafutils import get_wikipedia_link
 
 __revision__ = "$Id$"
-
-from urllib2 import urlopen
-from lxml import etree
-def get_wikipedia_link(viaf_id):
-    url = "http://viaf.org/viaf/" + str(viaf_id) +"/viaf.xml"
-    string_xml = urlopen(url).read()
-    xml = etree.fromstring(str(string_xml))
-    author_wikipedia_id = xml.xpath("/ns2:VIAFCluster/ns2:sources/ns2:source[contains(text(),'WKP')]/@nsid",namespaces={"ns2":"http://viaf.org/viaf/terms#"})
-    if type(author_wikipedia_id) is list:
-        author_wikipedia_id = author_wikipedia_id[0]
-    url_to_wikipedia = "http://www.wikipedia.com/wiki/"+author_wikipedia_id
-    return url_to_wikipedia
-
 
 def format_element(bfo):
     """ Prints the control number of an author authority record in HTML.
@@ -56,85 +44,41 @@ def format_element(bfo):
     from invenio.messages import gettext_set_language
     _ = gettext_set_language(bfo.lang)    # load the right message language
 
-    control_nos = [d['a'] for d in bfo.fields('035__')]
+    control_nos = [d['a'] for d in bfo.fields('035__') if d['a'] is not None]
     control_nos = filter(None, control_nos) # fastest way to remove empty ""s
-
-    control_nos_formatted = []
+    style = "style='width:auto;height:20px'"
+    links_formatted = []
     for control_no in control_nos:
-#        recIDs = []
-#        types = guess_authority_types(bfo.recID)
-#        # control_no example: AUTHOR:(CERN)aaa0005"
-#        control_nos = [(type + CFG_BIBAUTHORITY_PREFIX_SEP + control_no) for type in types]
-#        for control_no in control_nos:
-#            recIDs.extend(list(search_pattern(p='"' + control_no + '"')))
-        recIDs = get_dependent_records_for_control_no(control_no)
-        count = len(recIDs)
-        count_string = str(count) + " dependent records"
         from urllib import quote
-        # if we have dependent records, provide a link to them
-        if count:
-            prefix_pattern = "<a href='" + CFG_SITE_URL + "%s" + "'>"
-            postfix = "</a>"
-            url_str = ''
-            # we have multiple dependent records
-            if count > 1:
-                # joining control_nos might be more helpful for the user
-                # than joining recIDs... or maybe not...
-#                p_val = '"' + '" or "'.join(control_nos) + '"' # more understandable for the user
+        image_pattern = "<a href='%(external_article)s'><img %(style)s src='/img/%(image)s'/>   %(text)s</a>"
 
-                #p_val = "recid:" + ' or recid:'.join([str(recID) for recID in recIDs]) # more efficient
-                parameters = []
-                for ctrl_number_field_numbers in CFG_BIBAUTHORITY_RECORD_AUTHOR_CONTROL_NUMBER_FIELDS:
-                    parameters.append(ctrl_number_field_numbers + ":" + control_no)
-                p_val = quote(" or ".join(parameters))
-                # include "&c=" parameter for bibliographic records
-                # and one "&c=" parameter for authority records
-                url_str = \
-                    "/search" + \
-                    "?p=" + p_val + \
-                    "&c=" + quote(CFG_SITE_NAME) + \
-                    "&c=" + CFG_BIBAUTHORITY_AUTHORITY_COLLECTION_NAME + \
-                    "&sc=1" + \
-                    "&ln=" + bfo.lang
-            # we have exactly one dependent record
-            elif count == 1:
-                url_str = "/record/" + str(recIDs[0])
+        if (control_no.find("|(VIAF)") != -1):
+            viaf_id = control_no.split("|(VIAF)")[1]
+            link_to_wikipedia = get_wikipedia_link(viaf_id)
+            # Wikipedia link with wiki icon
+            image_element = image_pattern % { "style": style, "text": "Wikipedia link", "image": "wikipedia.png", "external_article": link_to_wikipedia}
+            links_formatted.append(image_element)
+            # VIAF link
+            text_element = "<a href='%(external_article)s' %(style)s>%(text)s</a>" \
+                    % {"style" : "style='width:auto;height:20px;font-size:17px'", "text" : "VIAF cluster link", "external_article": str("http://viaf.org/viaf/"+viaf_id) }
+            links_formatted.append(text_element)
+        if (control_no.find("|(DLC)") != -1):
+            dlc_id = control_no.split("|(DLC)")[1].replace(" ","")
+            link_to_lccn = "http://lccn.loc.gov/"+ dlc_id
+            image_element = image_pattern % { "style" : style, "text": "Library of Congress link", "image": "library_of_congress.png", "external_article" : link_to_lccn }
+            links_formatted.append(image_element)
 
-            prefix = prefix_pattern % (url_str)
-            count_string = prefix + count_string + postfix
-        #assemble the html and append to list
-        html_str = control_no + " (" + count_string + ")"
 
-        #"?p=" + "recid:" + 'or recid:'.join([str(_id) for _id in my_recIDs]) + \
-        # check if there are more than one authority record with the same
-        # control number. If so, warn the user about this inconsistency.
-        # TODO: hide this warning from unauthorized users
-        my_recIDs = get_low_level_recIDs_from_control_no(control_no)
-        if len(my_recIDs) > 1:
-            url_str = \
-                    "/search" + \
-                    "?p=" + CFG_BIBAUTHORITY_RECORD_CONTROL_NUMBER_FIELD + ":" + control_no + \
-                    "&c=" + quote(CFG_SITE_NAME) + \
-                    "&c=" + CFG_BIBAUTHORITY_AUTHORITY_COLLECTION_NAME + \
-                    "&sc=1" + \
-                    "&ln=" + bfo.lang
-            html_str += \
-                ' <span style="color:red">' + \
-                '(Warning, there is currently ' + \
-                '<a href="' + url_str + '">more than one authority record</a> ' + \
-                'with this Control Number)' + \
-                '</span>'
+    if links_formatted is not None:
+        title = "<strong>" + _("Useful link(s)") + "</strong>"
+        if links_formatted:
+            content = "<ul><li>" + "</li><li> ".join(links_formatted) + "</li></ul>"
+        else:
+            content = "<strong style='color:red'>Missing !</strong>"
 
-        control_nos_formatted.append(html_str)
-
-    title = "<strong>" + _("Control Number(s)") + "</strong>"
-    if control_nos_formatted:
-        content = "<ul><li>" + "</li><li> ".join(control_nos_formatted) + "</li></ul>"
+        return "<p>" + title + ": " + content + "</p>"
     else:
-        content = "<strong style='color:red'>Missing !</strong>"
-
-    return "<p>" + title + ": " + content + "</p>"
-
+        return None
 def escape_values(bfo):
     """
     Called by BibFormat in order to check if output of this element
