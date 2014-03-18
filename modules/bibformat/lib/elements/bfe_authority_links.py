@@ -46,11 +46,11 @@ def format_element(bfo):
 
     control_nos = [d['a'] for d in bfo.fields('035__') if d['a'] is not None]
     control_nos = filter(None, control_nos) # fastest way to remove empty ""s
-    style = "style='width:auto;height:20px'"
+    style = "style='width:auto;height:20px;margin-right:10px'"
     links_formatted = []
     for control_no in control_nos:
         from urllib import quote
-        image_pattern = "<a href='%(external_article)s'><img %(style)s src='/img/%(image)s'/>   %(text)s</a>"
+        image_pattern = "<a href='%(external_article)s'><img %(style)s src='/img/%(image)s'/>%(text)s</a>"
 
         if (control_no.find("|(VIAF)") != -1):
             viaf_id = control_no.split("|(VIAF)")[1]

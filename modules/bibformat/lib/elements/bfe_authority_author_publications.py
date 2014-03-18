@@ -70,7 +70,7 @@ def format_element(bfo):
             url_str = ''
             # we have multiple dependent records
             if count > CFG_BIBAUTHORITY_PUBLICATION_VIEW_LIMIT:
-                titles = get_fieldvalues(recIDs[:CFG_BIBAUTHORITY_PUBLICATION_VIEW_LIMIT],"245__a")
+                #titles = get_fieldvalues(recIDs[:CFG_BIBAUTHORITY_PUBLICATION_VIEW_LIMIT],"245__a")
                 for i in xrange(CFG_BIBAUTHORITY_PUBLICATION_VIEW_LIMIT):
                     title = get_fieldvalues(recIDs[i],"245__a")
                     if title:
@@ -78,7 +78,7 @@ def format_element(bfo):
                         prefix = prefix_pattern % url_str
                         publications_formatted.append(prefix + title[0] + postfix)
             else:
-                titles = get_fieldvalues(recIDs,"245__a")
+                #titles = get_fieldvalues(recIDs,"245__a")
                 for i in xrange(len(recIDs)):
                     title = get_fieldvalues(recIDs[i],"245__a")
                     if title:
