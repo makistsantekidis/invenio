@@ -58,7 +58,7 @@ def format_element(bfo):
 #        for control_no in control_nos:
 #            recIDs.extend(list(search_pattern(p='"' + control_no + '"')))
         for ctrl_number_field_numbers in CFG_BIBAUTHORITY_RECORD_AUTHOR_CONTROL_NUMBER_FIELDS:
-            parameters.append(ctrl_number_field_numbers + ":" + control_no)
+            parameters.append(ctrl_number_field_numbers + ":" + control_no.replace(" ",""))
         recIDs = [x for x in get_dependent_records_for_control_no(control_no) if x not in previous_recIDs]
         count = len(recIDs)
         count_string = str(count) + " dependent records"
