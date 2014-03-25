@@ -2918,8 +2918,8 @@ class Template:
                  <tr>
                  <td>
                 <input type="hidden" id="authors_input" name="%(name)s"  value="%(value)s"/>
-                <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.3.0/handlebars.min.js"></script>
-                <script type="text/javascript" src="http://twitter.github.io/typeahead.js/releases/latest/typeahead.bundle.js"></script>
+                <script type="text/javascript" src="/js/handlebars.min.js"></script>
+                <script type="text/javascript" src="/js/typeahead.bundle.min.js"></script>
                 <script>
 
                 var authors = {};
