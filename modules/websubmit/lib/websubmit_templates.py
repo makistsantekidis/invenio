@@ -2898,30 +2898,32 @@ class Template:
          'help-label': escape_javascript_string(_("Use '\\$' delimiters to write LaTeX markup. Eg: \\$e=mc^{2}\\$")),
          }
 
-    def tmpl_authors_autocompletion(self, element, indir, doctype, access):
+    def tmpl_authors_autocompletion(self, element, indir=None, doctype=None, access=None):
         # _ = gettext_set_language(ln)
         ## <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
-                return '''<tr><td style="font-size:small;">To add custom Authors use the format: <br> <i>Lastname, Firstname: Affiliation </i></td></tr>
-                 <tr>
-                 <td valign="top" style="width:20%%;">
-                 <input style="width:300px; background-color: rgb(255, 255, 255);" id="author_textbox" placeholder="Type to find authors" name="add_author" class="typeahead"/>
-                 </td>
-                 <td>
-                 <button align="left" valign="top" onclick="AppendAuthorToAuthorHiddenInput()">Add Author</button>
-                 <td/>
-                 </tr>
-                 </tbody></table>
-                 <table id="websubmit_authors_table"><tbody id="websubmit_authors_tbody">
-                 <tr><th>Last name</th><th>First name</th><th>Affiliation</th></tr>
-                 </tbody></table>
-                 <table><tbody>
-                 <tr>
-                 <td>
-                <input type="hidden" id="authors_input" name="%(name)s"  value="%(value)s"/>
+        params = ""
+        from urllib2 import quote
+        if indir:
+            params = 'indir=%(indir)s&doctype=%(doctype)s&access=%(access)s' % { "indir": quote(indir), "doctype": quote(doctype), "access": quote(access) }
+        return '''<div style="font-size:small;">To add custom Authors use the format: <br> <i>Lastname, Firstname: Affiliation </i></div>
+                 <div style="width:100%%; display:table;">
+                 <div style="display:table-row">
+                 <div style="display:table-cell;width:50%%">
+                 <input style="display:table-cell; width:300px; background-color: rgb(255, 255, 255);" id="author_textbox" placeholder="Type to find authors" name="add_author" class="typeahead"/>
+                 </div>
+                 <button style="display: table-cell;" align="left" valign="top" onclick="AppendAuthorToAuthorHiddenInput()">Add Author</button>
+                 </div>
+                 </div>
+                 <div>
+                 <div id="websubmit_authors_table">
+                 <div id="websubmit_authors_tbody">
+                 </div>
+                 </div>
+                </div>
+                <input type="hidden" id="authors_input" name="%(name)s" value="%(value)s"/>
                 <script type="text/javascript" src="/js/handlebars.min.js"></script>
                 <script type="text/javascript" src="/js/typeahead.bundle.min.js"></script>
                 <script>
-
                 var authors = {};
                 var authorindex = 0;
 
@@ -2948,15 +2950,15 @@ class Template:
                 }
 
                 function appendRow(Name,Surname,affiliation,index) {
-                    newRow = "<tr class='websubmit_authors_tr'>" +
-                        "<td class='websubmit_authors_td'>" + Surname + "</td>" +
-                        "<td class='websubmit_authors_td'>" + Name + "</td>" +
-                        "<td class='websubmit_authors_td'>" + affiliation + "</td>" +
-                        "<td class='websubmit_authors_td'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></td>" +
-                        "<td style='display:none;' id= 'entry_info'></td>" +
-                        "</tr>";
-                   $('#websubmit_authors_table > tbody:last').append(newRow);
-                   $('#websubmit_authors_table > tbody > tr:last').slideDown('slow');
+                    newRow = "<div class='websubmit_authors_td'>" +
+                        "<div class='websubmit_authors_tr' style='float:left;margin-right:20px'>" + Name + " " + Surname +  "</div>" +
+                        "<div class='websubmit_authors_tr' style='float:right'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></div>" +
+                        "<div class='websubmit_authors_tr'  >" + affiliation + "</div>" +
+                        "<label style='flow:left'>Contribution:</label>" +
+                        "<textarea style='vertical-align:text-top;'></textarea>" +
+                        "<div style='display:none;' id= 'entry_info'></div>" +
+                        "</div>";
+                   $('#websubmit_authors_tbody').append(newRow);
                     exportAuthorsToTextarea();
                 }
 
@@ -2993,10 +2995,20 @@ class Template:
                         document.getElementById('authors_input').value += format_author_entry(authors[key]['firstname'],authors[key]['lastname'],authors[key]['affiliation']) + "\\r\\n";
                     }
                 }
+
+                function importAuthorsFromInput(){
+                    var json = document.getElementById('authors_input').value
+                    var obj = JSON && JSON.parse(json) || $.parseJSON(json);
+                    for (var i in obj){
+                        authors[i] = obj[i]
+                    }
+                }
+
+
                 var engine = new Bloodhound({
                     name: 'authors',
                     local: [],
-                    remote: 'http://pcuds55.cern.ch/submit/get_author_list?author=%%QUERY&indir=%(indir)s&doctype=%(doctype)s&access=%(access)s',
+                    remote: 'http://pcuds55.cern.ch/submit/get_author_list?author=%%QUERY&%(params)s',
                     datumTokenizer: function(d) {
                         console.log("ASDASDASDASDASDASD");console.log(d);
                         tokens = []
@@ -3012,6 +3024,9 @@ class Template:
                     //Bloodhound.tokenizers.whitespace
                     });
 
+
+                //if (document.getElementById('authors_input').value)
+                    //importAuthorsFromInput();
                 engine.initialize();
                 $('.typeahead').typeahead({
                     highlight: true,
@@ -3031,7 +3046,7 @@ class Template:
                 $('#author_textbox').on('typeahead:selected', AppendAuthorToAuthorHiddenInput);
                 $('#author_textbox').on('typeahead:closed',null);
                 $("#author_textbox").css("background-color","rgba(255,255,255,255)");
-                </script>''' % {"name": element['name'], "indir": indir, "doctype": doctype, "access": access, "value" : element['value']}
+                </script>''' % {"name": element['name'], "params": params, "value" : element['value']}
 
 
 def displaycplxdoc_displayauthaction(action, linkText):

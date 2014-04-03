@@ -57,7 +57,6 @@ from invenio.errorlib import register_exception
 from invenio.urlutils import make_canonical_urlargd, redirect_to_url
 from invenio.websubmitadmin_engine import string_is_alphanumeric_including_underscore
 from invenio.htmlutils import get_mathjax_header
-from invenio.pluginutils import PluginContainer
 
 from invenio.websubmit_dblayer import \
      get_storage_directory_of_action, \
@@ -1861,10 +1860,12 @@ def prepare_author_sources(curdir, sources):
     f.write('\n'.join(sources) + '\n')
     f.close()
 
-def get_author_autocompletion_form(element, indir, doctype, access):
-    return websubmit_templates.tmpl_authors_autocompletion(element, indir, doctype, access)
+def get_author_autocompletion_form(element, curdir=None, indir=None, doctype=None, access=None):
+    if curdir:
+        indir = curdir.split('/')[-3]
+    return websubmit_templates.tmpl_authors_autocompletion(element, indir=quote_plus(indir), doctype=quote_plus(doctype), access=quote_plus(access))
 
-def get_authors_from_allowed_sources(req, author_string, indir, doctype, access, ln=CFG_SITE_LANG):
+def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=None, access=None, ln=CFG_SITE_LANG):
     _ = gettext_set_language(ln)
     authors_type = None
     def plugin_builder_function(plugin_name, plugin_code):
@@ -1874,21 +1875,27 @@ def get_authors_from_allowed_sources(req, author_string, indir, doctype, access,
         ret["source_name"] = source_name
         ret["query_function"] = query_function
         return ret
-
+    from urllib2 import unquote
     from invenio.websubmit_functions.Shared_Functions import ParamFromFile
-    author_sources = ParamFromFile(os.path.join(CFG_WEBSUBMIT_STORAGEDIR, indir, doctype, access, 'author_sources'))
-    sources = author_sources.split("\n")
     user_info = collect_user_info(req)
-    SuE = ParamFromFile(os.path.join(CFG_WEBSUBMIT_STORAGEDIR, indir, doctype, access, 'SuE'))
+    SuE = None
+    author_sources = None
+    if indir:
+        author_sources = ParamFromFile(os.path.join(CFG_WEBSUBMIT_STORAGEDIR, indir, doctype, access, 'author_sources'))
+        SuE = ParamFromFile(os.path.join(CFG_WEBSUBMIT_STORAGEDIR, indir, doctype, access, 'SuE'))
+    else:
+        return [[],"Could not find submission"]
+
+    sources = author_sources.split("\n")
     email = user_info['email'] # get email from req
     if email != SuE:
         return [[],"Not Authorized"]
-
+    from invenio.pluginutils import PluginContainer
     result = []
     author_sources_plugins = PluginContainer(
-    os.path.join(CFG_PYLIBDIR,
-                 'invenio', 'websubmit_author_sources_plugins', '*.py'),
-    plugin_builder_function)
+            os.path.join(CFG_PYLIBDIR,
+                'invenio', 'websubmit_author_sources_plugins', '*.py'),
+            plugin_builder_function)
     for source in sources:
         source = source.rstrip()
         if author_sources_plugins.has_key(str(source)):
