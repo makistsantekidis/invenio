@@ -954,7 +954,7 @@ class WebInterfaceSubmitPages(WebInterfaceDirectory):
          'access' : (str, ''),
          'author' : (str, '')
          })
-        result = get_authors_from_allowed_sources(req,argd["author"], argd['indir'], argd['doctype'], argd['access'])
+        result = get_authors_from_allowed_sources(req,argd["author"], indir=argd['indir'], doctype=argd['doctype'], access=argd['access'])
 
         return json.dumps(result[0])
 
