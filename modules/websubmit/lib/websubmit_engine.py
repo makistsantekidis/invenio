@@ -1905,3 +1905,39 @@ def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=Non
                 register_exception(req=req, alert_admin=True, prefix="Error in executing plugin %s with globals %s" % (pprint.pformat(source), pprint.pformat(the_globals)))
                 raise
     return result
+
+def convert_record_authors_to_json(record_id):
+    from invenio.search_engine import get_record
+    record = get_record(record_id)
+    def convert_tag_tuple_array_to_author_dictionary(record_tag):
+        author = {}
+        for _tuple in record_tag:
+            if _tuple[0] == 'a':
+                author['name'] = _tuple[1]
+            elif _tuple[0] == 'x':
+                if not author.get("id",None):
+                    author['id'] = []
+                author['id'].append(_tuple[1])
+            elif _tuple[0] == 'c':
+                author['contribution'] = _tuple[1]
+            elif _tuple[0] == 'u':
+                author['affiliation'] = _tuple[1]
+            elif _tuple[0] == 'm':
+                author['email'] = _tuple[1]
+        return author
+    authors = [convert_tag_tuple_array_to_author_dictionary(record['100'][0][0])]
+    for author in record['700']:
+        authors.append(convert_tag_tuple_array_to_author_dictionary(author[0]))
+    from json import dumps
+    return dumps({'items' : authors}).replace("\"","'")
+
+
+
+
+
+
+
+
+
+
+
