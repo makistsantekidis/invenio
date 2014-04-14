@@ -4117,21 +4117,18 @@ img.login_button_small {
 #websubmit_authors_table {
     border-collapse: collapse;
     box-sizing: border-box;
+    overflow:auto
     height: 38px;
     max-width: 100%;
     width: 665px;
-    border: 1px solid rgb(221, 221, 221);
-    border-spacing: 0px 0px;
     font: normal normal normal 14px/20px 'Helvetica Neue', Helvetica, Arial, sans-serif;
     margin: 0px 0px 20px;
 }
 
 #websubmit_authors_tbody {
-    border-collapse: collapse;
-    box-sizing: border-box;
-    height: 37px;
+    /*border-collapse: collapse;
+    box-sizing: border-box;*/
     width: 664px;
-    border: 0px none rgb(221, 221, 221);
     font: normal normal normal 14px/20px 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
@@ -4139,7 +4136,6 @@ img.login_button_small {
     border-collapse: collapse;
     box-sizing: border-box;
     vertical-align: middle;
-    border: 0px none rgb(221, 221, 221);
     font: normal normal normal 14px/20px 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
@@ -4150,7 +4146,6 @@ img.login_button_small {
     vertical-align: top;
     width: 664px;
     background: rgb(249, 249, 249) none repeat scroll 0% 0% / auto padding-box border-box;
-    border: 1px solid rgb(221, 221, 221);
     font: normal normal normal 14px/20px 'Helvetica Neue', Helvetica, Arial, sans-serif;
     padding: 5px;
     margin-bottom:10px;

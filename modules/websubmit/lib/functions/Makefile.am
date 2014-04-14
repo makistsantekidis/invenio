@@ -23,6 +23,7 @@ pylib_DATA = __init__.py \
              Ask_For_Record_Details_Confirmation.py \
              CaseEDS.py \
              Check_Group.py \
+	     Convert_Field_from_Json.py \
              Convert_RecXML_to_RecALEPH.py \
              Convert_RecXML_to_RecALEPH_DELETE.py \
              Create_Cplx_Approval.py \

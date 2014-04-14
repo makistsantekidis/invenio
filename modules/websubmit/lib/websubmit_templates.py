@@ -2914,11 +2914,7 @@ class Template:
                  <button style="display: table-cell;" align="left" valign="top" onclick="AppendAuthorToAuthorHiddenInput()">Add Author</button>
                  </div>
                  </div>
-                 <div>
                  <div id="websubmit_authors_table">
-                 <div id="websubmit_authors_tbody">
-                 </div>
-                 </div>
                 </div>
                 <input type="hidden" id="authors_input" name="%(name)s" value="%(value)s"/>
                 <script type="text/javascript" src="/js/handlebars.min.js"></script>
@@ -2944,21 +2940,32 @@ class Template:
                     var entry = format_author_entry(datum['firstname'],datum['lastname'],datum['affiliation']);
                     if (document.getElementById('authors_input').value.indexOf(entry) == -1){
                     authors[++authorindex] = datum
-                    appendRow(datum['firstname'],datum['lastname'],datum['affiliation'],authorindex);
+                    appendRow(datum['firstname']+" ,"+datum['lastname'],datum['affiliation'],authorindex,"");
                     }
                     $('#author_textbox').val("");
                 }
 
-                function appendRow(Name,Surname,affiliation,index) {
+                function appendRow(Name,affiliation,index,contribution) {
+                    if (contribution == undefined)
+                    { contribution = "" ;}
                     newRow = "<div class='websubmit_authors_td'>" +
-                        "<div class='websubmit_authors_tr' style='float:left;margin-right:20px'>" + Name + " " + Surname +  "</div>" +
+                        "<div class='websubmit_authors_tr' style='float:left;margin-right:20px'>" + Name +  "</div>" +
                         "<div class='websubmit_authors_tr' style='float:right'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></div>" +
                         "<div class='websubmit_authors_tr'  >" + affiliation + "</div>" +
                         "<label style='flow:left'>Contribution:</label>" +
-                        "<textarea style='vertical-align:text-top;'></textarea>" +
-                        "<div style='display:none;' id= 'entry_info'></div>" +
+                        "<textarea id='contribution_textfield_" + index + "' style='vertical-align:text-top;' onkeyup='add_author_contribution(this,"+index+")'>"+contribution+"</textarea>" +
+                        "<div style='display:none;clear: both;' id= 'entry_info'></div>" +
                         "</div>";
-                   $('#websubmit_authors_tbody').append(newRow);
+                    $('#websubmit_authors_table').append(newRow);
+                   // $('#contribution_textfield_'+index).on('change',add_author_contribution($('#contribution_textfield_'+index),index));
+
+                    exportAuthorsToTextarea();
+                }
+
+
+                function add_author_contribution(e,index)
+                {
+                    authors[index]['contribution'] = e.value;
                     exportAuthorsToTextarea();
                 }
 
@@ -2991,16 +2998,20 @@ class Template:
 
                 function exportAuthorsToTextarea(){
                     document.getElementById('authors_input').value = "";
+                    var items_array = {"items":[]};
                     for (var key in authors) {
-                        document.getElementById('authors_input').value += format_author_entry(authors[key]['firstname'],authors[key]['lastname'],authors[key]['affiliation']) + "\\r\\n";
+                        items_array["items"].push(authors[key])
                     }
+                    document.getElementById('authors_input').value = JSON.stringify(items_array);
+
                 }
 
                 function importAuthorsFromInput(){
-                    var json = document.getElementById('authors_input').value
+                    var json = document.getElementById('authors_input').value.split("'").join("\\"")
                     var obj = JSON && JSON.parse(json) || $.parseJSON(json);
-                    for (var i in obj){
-                        authors[i] = obj[i]
+                    for (var i in obj['items']){
+                        authors[i] = obj['items'][i];
+                        appendRow(authors[i]['name'],authors[i]['affiliation'],i,authors[i]['contribution'])
                     }
                 }
 
@@ -3010,7 +3021,6 @@ class Template:
                     local: [],
                     remote: 'http://pcuds55.cern.ch/submit/get_author_list?author=%%QUERY&%(params)s',
                     datumTokenizer: function(d) {
-                        console.log("ASDASDASDASDASDASD");console.log(d);
                         tokens = []
                         tokens.push(Bloodhound.tokenizers.whitespace(d['lastname']));
                         tokens.push(Bloodhound.tokenizers.whitespace(d['firstname']));
@@ -3025,8 +3035,8 @@ class Template:
                     });
 
 
-                //if (document.getElementById('authors_input').value)
-                    //importAuthorsFromInput();
+                if (document.getElementById('authors_input').value != "")
+                    importAuthorsFromInput();
                 engine.initialize();
                 $('.typeahead').typeahead({
                     highlight: true,
