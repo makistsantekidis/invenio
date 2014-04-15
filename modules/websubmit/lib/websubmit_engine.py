@@ -1911,13 +1911,12 @@ def convert_record_authors_to_json(record_id):
     record = get_record(record_id)
     def convert_tag_tuple_array_to_author_dictionary(record_tag):
         author = {}
+        from invenio.websubmit_functions.Shared_Functions import get_dictionary_from_string
         for _tuple in record_tag:
             if _tuple[0] == 'a':
                 author['name'] = _tuple[1]
             elif _tuple[0] == 'x':
-                if not author.get("id",None):
-                    author['id'] = []
-                author['id'].append(_tuple[1])
+                author['id'] = [str(id) for id in get_dictionary_from_string(_tuple[1])]
             elif _tuple[0] == 'c':
                 author['contribution'] = _tuple[1]
             elif _tuple[0] == 'u':
