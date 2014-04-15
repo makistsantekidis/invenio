@@ -2937,8 +2937,8 @@ class Template:
                     datum['firstname'] = author_textbox.split(',')[1].split(':')[0].replace(' ','')
                     datum['affiliation'] = author_textbox.split(':')[1].replace(' ','')
                     }
-                    var entry = format_author_entry(datum['firstname'],datum['lastname'],datum['affiliation']);
-                    if (document.getElementById('authors_input').value.indexOf(entry) == -1){
+                    if (!checkAuthorExistence(datum))
+                    {
                     authors[++authorindex] = datum
                     appendRow(datum['firstname']+" ,"+datum['lastname'],datum['affiliation'],authorindex,"");
                     }
