@@ -1860,10 +1860,10 @@ def prepare_author_sources(curdir, sources):
     f.write('\n'.join(sources) + '\n')
     f.close()
 
-def get_author_autocompletion_form(element, curdir=None, indir=None, doctype=None, access=None):
+def get_author_autocompletion_form(element, curdir=None, indir=None, doctype=None, access=None, extra_fields={}):
     if curdir:
         indir = curdir.split('/')[-3]
-    return websubmit_templates.tmpl_authors_autocompletion(element, indir=quote_plus(indir), doctype=quote_plus(doctype), access=quote_plus(access))
+    return websubmit_templates.tmpl_authors_autocompletion(element, indir=quote_plus(indir), doctype=quote_plus(doctype), access=quote_plus(access), extra_fields=extra_fields)
 
 def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=None, access=None, ln=CFG_SITE_LANG):
     _ = gettext_set_language(ln)

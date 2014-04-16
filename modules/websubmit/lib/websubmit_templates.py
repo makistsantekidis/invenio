@@ -2898,10 +2898,16 @@ class Template:
          'help-label': escape_javascript_string(_("Use '\\$' delimiters to write LaTeX markup. Eg: \\$e=mc^{2}\\$")),
          }
 
-    def tmpl_authors_autocompletion(self, element, indir=None, doctype=None, access=None):
+    def tmpl_authors_autocompletion(self, element, indir=None, doctype=None, access=None, extra_fields={}):
         # _ = gettext_set_language(ln)
         ## <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
         params = ""
+        contribution = ""
+        if extra_fields.get('contribution',False):
+            contribution = """
+                            "<label style='flow:left'>Contribution:</label>" +
+                        "<textarea id='contribution_textfield_" + index + "' style='margin-left:20px;vertical-align:text-top;' onkeyup='add_author_extra_field(this,"+index+",\\"contribution\\")'>"+contribution+"</textarea>" +
+                        """
         from urllib2 import quote
         if indir:
             params = 'indir=%(indir)s&doctype=%(doctype)s&access=%(access)s' % { "indir": quote(indir), "doctype": quote(doctype), "access": quote(access) }
@@ -2939,8 +2945,14 @@ class Template:
                     }
                     if (!checkAuthorExistence(datum))
                     {
-                    authors[++authorindex] = datum
-                    appendRow(datum['firstname']+" ,"+datum['lastname'],datum['affiliation'],authorindex,"");
+                    authors[++authorindex] = $.extend({}, datum)
+                    if ("firstname" in authors[authorindex])
+                    {
+                        authors[authorindex]['name'] = authors[authorindex]['firstname']+ ", "+authors[authorindex]['lastname']
+                        delete authors[authorindex]['firstname'];
+                        delete authors[authorindex]['lastname'];
+                    }
+                    appendRow(datum['firstname']+", "+datum['lastname'],datum['affiliation'],authorindex,"");
                     }
                     $('#author_textbox').val("");
                 }
@@ -2951,21 +2963,19 @@ class Template:
                     newRow = "<div class='websubmit_authors_td'>" +
                         "<div class='websubmit_authors_tr' style='float:left;margin-right:20px'>" + Name +  "</div>" +
                         "<div class='websubmit_authors_tr' style='float:right'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></div>" +
-                        "<div class='websubmit_authors_tr'  >" + affiliation + "</div>" +
-                        "<label style='flow:left'>Contribution:</label>" +
-                        "<textarea id='contribution_textfield_" + index + "' style='vertical-align:text-top;' onkeyup='add_author_contribution(this,"+index+")'>"+contribution+"</textarea>" +
+                        "<div class='websubmit_authors_tr' style='margin-left:160px' >" + affiliation + "</div>" +
+                        %(contribution)s
                         "<div style='display:none;clear: both;' id= 'entry_info'></div>" +
                         "</div>";
                     $('#websubmit_authors_table').append(newRow);
-                   // $('#contribution_textfield_'+index).on('change',add_author_contribution($('#contribution_textfield_'+index),index));
 
                     exportAuthorsToTextarea();
                 }
 
 
-                function add_author_contribution(e,index)
+                function add_author_extra_field(e,index,fieldname)
                 {
-                    authors[index]['contribution'] = e.value;
+                    authors[index][fieldname] = e.value;
                     exportAuthorsToTextarea();
                 }
 
@@ -2978,21 +2988,23 @@ class Template:
                 }
 
                 function checkAuthorExistence(datum){
+                    var value_array = []
+                    value_array.push(datum['affiliation'])
+                    if ('name' in datum) value_array.push(datum['name'])
+                    if ('firstname' in datum) value_array.push(datum['firstname']+", " + datum['lastname'])
+
+                    if (Object.keys(authors).length === 0){return false}
                     for (var key in authors) {
-                        subkeys = Object.keys(authors[key])
-                        identical = true;
-                        for (var subkey in subkeys){
-                            if (author[key][subkey] != datum[subkey]){
-                                identical = false;
+                        if (value_array.indexOf(authors[key]['name'])!= -1 &&
+                             value_array.indexOf(authors[key]['affiliation'])!=-1)
+                            {
+                                return true
                             }
-                        }
-                        if (identical) return true
                     }
                     return false
                 }
 
                 function dispkey(suggestion_object){
-                console.log(suggestion_object);
                 return suggestion_object["lastname"] + ", " + suggestion_object["firstname"] + ": " + suggestion_object["affiliation"] ;
                 }
 
@@ -3029,14 +3041,17 @@ class Template:
                         return tokens;
                     },
                     queryTokenizer: function (s){
-                        return s.split(/[ ,:]+/);
+                        return s.split(/[, :]+/);
                     },
                     //Bloodhound.tokenizers.whitespace
                     });
 
 
-                if (document.getElementById('authors_input').value != "")
+                if (document.getElementById('authors_input').value != "" && document.getElementById('authors_input').value != "None")
+                {
                     importAuthorsFromInput();
+
+                }
                 engine.initialize();
                 $('.typeahead').typeahead({
                     highlight: true,
@@ -3056,7 +3071,7 @@ class Template:
                 $('#author_textbox').on('typeahead:selected', AppendAuthorToAuthorHiddenInput);
                 $('#author_textbox').on('typeahead:closed',null);
                 $("#author_textbox").css("background-color","rgba(255,255,255,255)");
-                </script>''' % {"name": element['name'], "params": params, "value" : element['value']}
+                </script>''' % {"name": element['name'], "params": params, "value" : element['value'],  "contribution": contribution}
 
 
 def displaycplxdoc_displayauthaction(action, linkText):
