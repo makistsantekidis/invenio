@@ -50,6 +50,9 @@ def Convert_Field_from_Json(parameters, curdir, form, user_info=None):
     ## separators in case a field has more than one values
     field_key_to_separator = { 'AUTHOR_ID' : '</subfield><subfield code="x">', 'DEMOTHE_AU' : ', '}
 
+
+
+
     filename = "%s/%s" % (curdir,json_field)
     if os.path.exists(filename):
 
@@ -64,7 +67,7 @@ def Convert_Field_from_Json(parameters, curdir, form, user_info=None):
         ## and place them with their transalte from json key in
         ## the field_values dictionary
         for items in obj['items']:
-            field_values.append({})
+            field_values.append(reduce(lambda x,y: x.update(y) or x,[{f:None} for f in set(json_key_to_marc_field.itervalues())]))
             for k,v in items.iteritems():
                 if json_key_to_marc_field.get(k,None):
                     if not field_values[-1].get(json_key_to_marc_field[k],None):
