@@ -2952,7 +2952,14 @@ class Template:
                         delete authors[authorindex]['firstname'];
                         delete authors[authorindex]['lastname'];
                     }
+                    if (datum['firstname'] != undefined){
                     appendRow(datum['firstname']+", "+datum['lastname'],datum['affiliation'],authorindex,"");
+                    }
+                    else{
+                    appendRow(datum['name'],datum['affiliation'],authorindex,"");
+                    }
+
+
                     }
                     $('#author_textbox').val("");
                 }
@@ -3063,7 +3070,7 @@ class Template:
                 templates: {
                    suggestion: Handlebars.compile([
                 '<p id="author_autocomplete_email_field" >{{email}}</p>',
-                '<p id="author_autocomplete_name_field">{{lastname}} {{firstname}}</p>',
+                '<p id="author_autocomplete_name_field">{{lastname}} {{firstname}} {{name}}</p>',
                 '<p id="author_autocomplete_affiliation_field">{{affiliation}}</p>'
                 ].join(''))},
                 source: engine.ttAdapter(),

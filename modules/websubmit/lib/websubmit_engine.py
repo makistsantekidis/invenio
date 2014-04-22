@@ -1902,9 +1902,9 @@ def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=Non
             try:
                 result.extend(author_sources_plugins[source]['query_function'](author_string))
             except:
-                register_exception(req=req, alert_admin=True, prefix="Error in executing plugin %s with globals %s" % (pprint.pformat(source), pprint.pformat(the_globals)))
+                register_exception(req=req, alert_admin=True, prefix="Error in executing plugin %s with globals %s" % (pprint.pformat(source), pprint.pformat(traceback.format_exc())))
                 raise
-    return result
+    return (result,None)
 
 def convert_record_authors_to_json(record_id):
     from invenio.search_engine import get_record
