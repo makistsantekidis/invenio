@@ -955,7 +955,6 @@ class WebInterfaceSubmitPages(WebInterfaceDirectory):
          'author' : (str, '')
          })
         result = get_authors_from_allowed_sources(req,argd["author"], indir=argd['indir'], doctype=argd['doctype'], access=argd['access'])
-
         return json.dumps(result[0])
 
 ## def retrieve_most_recent_attached_file(file_path):

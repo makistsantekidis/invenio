@@ -43,6 +43,11 @@ metadataplugin_DATA = __init__.py \
                       wsm_pyexiv2_plugin.py \
                       wsm_pdftk_plugin.py
 
-EXTRA_DIST = $(pylib_DATA) $(metadataplugin_DATA)
+autocompleteplugindir = $(libdir)/python/invenio/websubmit_author_sources_plugins
+autocompleteplugin_DATA = __init__.py \
+			     atlas.py \
+			     ldap_search.py
+
+EXTRA_DIST = $(pylib_DATA) $(metadataplugin_DATA) $(autocompleteplugin_DATA)
 
 CLEANFILES = *~ *.tmp *.pyc
