@@ -59,8 +59,8 @@ def format_element(bfo):
             image_element = image_pattern % { "style": style, "text": "Wikipedia link", "image": "wikipedia.png", "external_article": link_to_wikipedia}
             links_formatted.append(image_element)
             # VIAF link
-            text_element = "<a href='%(external_article)s' %(style)s>%(text)s</a>" \
-                    % {"style" : "style='width:auto;height:20px;font-size:17px'", "text" : "VIAF cluster link", "external_article": str("http://viaf.org/viaf/"+viaf_id) }
+            text_element = image_pattern \
+                    % {"style" : style, "text" : "VIAF cluster link","image": "viaf.png", "external_article": str("http://viaf.org/viaf/"+viaf_id) }
             links_formatted.append(text_element)
         if (control_no.find("|(DLC)") != -1):
             dlc_id = control_no.split("|(DLC)")[1].replace(" ","")
