@@ -206,6 +206,7 @@ install-jquery-plugins:
 	wget --no-check-certificate http://invenio-software.org/download/jquery/parsley.js &&\
 	wget --no-check-certificate http://invenio-software.org/download/jquery/spin.min.js &&\
 	rm -f jquery.bookmark.package-1.4.0.zip && \
+	wget http://ajax.cdnjs.com/ajax/libs/json2/20110223/json2.js && \
 	wget http://twitter.github.com/typeahead.js/releases/latest/typeahead.bundle.min.js && \
 	mkdir -p ${prefix}/var/www/img && \
 	cd ${prefix}/var/www/img && \

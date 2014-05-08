@@ -2905,8 +2905,8 @@ class Template:
         contribution = ""
         if extra_fields.get('contribution',False):
             contribution = """
-                            "<label style='flow:left'>Contribution:</label>" +
-                        "<textarea id='contribution_textfield_" + index + "' style='margin-left:20px;vertical-align:text-top;' onkeyup='add_author_extra_field(this,"+index+",\\"contribution\\")'>"+contribution+"</textarea>" +
+                            "<td><label style='flow:left'>Contribution:</label>" +
+                        "<textarea id='contribution_textfield_" + index + "' style='margin-left:20px;vertical-align:text-top;' onkeyup='add_author_extra_field(this,"+index+",\\"contribution\\")'>"+contribution+"</textarea></td>" +
                         """
         from urllib2 import quote
         if indir:
@@ -2925,6 +2925,7 @@ class Template:
                 <input type="hidden" id="authors_input" name="%(name)s" value="%(value)s"/>
                 <script type="text/javascript" src="/js/handlebars.min.js"></script>
                 <script type="text/javascript" src="/js/typeahead.bundle.min.js"></script>
+                <script type="text/javascript" src="/js/json2.js"></script>
                 <script>
                 var authors = {};
                 var authorindex = 0;
@@ -2967,13 +2968,14 @@ class Template:
                 function appendRow(Name,affiliation,index,contribution) {
                     if (contribution == undefined)
                     { contribution = "" ;}
-                    newRow = "<div class='websubmit_authors_td'>" +
-                        "<div class='websubmit_authors_tr' style='float:left;margin-right:20px'>" + Name +  "</div>" +
-                        "<div class='websubmit_authors_tr' style='float:right'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></div>" +
-                        "<div class='websubmit_authors_tr' style='margin-left:160px' >" + affiliation + "</div>" +
+                    newRow = "<div class='websubmit_authors_list' style='position:relative;'><table><tr>" +
+                        "<td style='width:100px;margin-right:20px;'>" + Name +  "</td>" +
+                        "<td style='margin-right:25px;margin-left:160px;margin-bottom:5px;' >" + affiliation + "</td>" +
+                        "<div style='position:absolute;top:5px;right:5px'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></div>" +
+                        "<tr/><tr></table><table>" +
                         %(contribution)s
-                        "<div style='display:none;clear: both;' id= 'entry_info'></div>" +
-                        "</div>";
+                        "<td style='display:none;clear: both;' id= 'entry_info'></div>" +
+                        "</tr></table></div>";
                     $('#websubmit_authors_table').append(newRow);
 
                     exportAuthorsToTextarea();
@@ -3034,7 +3036,53 @@ class Template:
                     }
                 }
 
+                // IE COMPATIBILITY
+                if (!Object.keys) {
+                    Object.keys = function(obj) {
+                        var keys = [],
+                            key;
 
+                        for (key in obj) {
+                            if (obj.hasOwnProperty(key)) {
+                                keys.push(key);
+                            }
+                        }
+
+                        return keys;
+                    };
+                }
+
+                if (!Array.prototype.indexOf) {
+                    Array.prototype.indexOf = function (searchElement, fromIndex) {
+                      if ( this === undefined || this === null ) {
+                        throw new TypeError( '"this" is null or not defined' );
+                      }
+
+                      var length = this.length >>> 0; // Hack to convert object.length to a UInt32
+
+                      fromIndex = +fromIndex || 0;
+
+                      if (Math.abs(fromIndex) === Infinity) {
+                        fromIndex = 0;
+                      }
+
+                      if (fromIndex < 0) {
+                        fromIndex += length;
+                        if (fromIndex < 0) {
+                          fromIndex = 0;
+                        }
+                      }
+
+                      for (;fromIndex < length; fromIndex++) {
+                        if (this[fromIndex] === searchElement) {
+                          return fromIndex;
+                        }
+                      }
+
+                      return -1;
+                    };
+                  }
+                // END IE COMBATIBILITY
                 var engine = new Bloodhound({
                     name: 'authors',
                     local: [],
@@ -3049,8 +3097,7 @@ class Template:
                     },
                     queryTokenizer: function (s){
                         return s.split(/[, :]+/);
-                    },
-                    //Bloodhound.tokenizers.whitespace
+                    }
                     });
 
 
@@ -3063,7 +3110,7 @@ class Template:
                 $('.typeahead').typeahead({
                     highlight: true,
                     hint: true,
-                    minLength: 3,
+                    minLength: 3
                 },
                 {
                 displayKey: dispkey,
@@ -3073,7 +3120,7 @@ class Template:
                 '<p id="author_autocomplete_name_field">{{lastname}} {{firstname}} {{name}}</p>',
                 '<p id="author_autocomplete_affiliation_field">{{affiliation}}</p>'
                 ].join(''))},
-                source: engine.ttAdapter(),
+                source: engine.ttAdapter()
                 });
                 $('#author_textbox').on('typeahead:selected', AppendAuthorToAuthorHiddenInput);
                 $('#author_textbox').on('typeahead:closed',null);
