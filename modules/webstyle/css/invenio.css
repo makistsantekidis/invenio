@@ -4013,7 +4013,7 @@ img.login_button_small {
 .tt-query,
 .tt-hint {
   width: 400px;
-  height: 13px;
+  height: 20px;
   padding: 8px 12px;
   font-size: 13px;
   line-height: 30px;
@@ -4139,16 +4139,14 @@ img.login_button_small {
     font: normal normal normal 14px/20px 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-.websubmit_authors_td {
+.websubmit_authors_list {
     border-collapse: collapse;
     box-sizing: border-box;
     height: auto;
-    vertical-align: top;
-    width: 664px;
-    background: rgb(249, 249, 249) none repeat scroll 0% 0% / auto padding-box border-box;
-    font: normal normal normal 14px/20px 'Helvetica Neue', Helvetica, Arial, sans-serif;
     padding: 5px;
     margin-bottom:10px;
+    background: rgb(249, 249, 249) none repeat scroll 0% 0% / auto padding-box border-box;
+    font: normal normal normal 14px/20px 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 /* end of invenio.css */
 
