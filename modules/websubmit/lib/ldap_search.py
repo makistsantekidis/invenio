@@ -1,5 +1,6 @@
 from invenio.bibcirculation_cern_ldap import _cern_ldap_login,_ldap_connection_pool,ldap,CFG_CERN_LDAP_BASE
 from thread import get_ident
+from time import sleep
 
 CFG_SOURCE_NAME = "ldap_search"
 
@@ -14,10 +15,6 @@ def query_author_source(nickname):
 
     if nickname:
         query = '(displayName=*%s*)' % (nickname)
-    elif email:
-        query = '(mail=%s)' % ldap.filter.escape_filter_chars(email)
-    elif ccid:
-        query = '(employeeID=%s)' % ldap.filter.escape_filter_chars(str(ccid))
     else:
         return {}
 
@@ -30,7 +27,7 @@ def query_author_source(nickname):
         sleep(1)
         connection = _ldap_connection_pool[get_ident()] = _cern_ldap_login()
         results = connection.search_st(CFG_CERN_LDAP_BASE, ldap.SCOPE_SUBTREE,
-                                query_filter, timeout=5)
+                                query_filter, timeout=10)
 
     formated_results = []
 

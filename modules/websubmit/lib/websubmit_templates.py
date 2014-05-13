@@ -3085,8 +3085,12 @@ class Template:
                 // END IE COMBATIBILITY
                 var engine = new Bloodhound({
                     name: 'authors',
+                    limit: 40,
                     local: [],
-                    remote: 'http://pcuds55.cern.ch/submit/get_author_list?author=%%QUERY&%(params)s',
+                    remote: {
+                             url : 'http://pcuds55.cern.ch/submit/get_author_list?author=%%QUERY&%(params)s',
+                             rateLimitWait : 500
+                            },
                     datumTokenizer: function(d) {
                         tokens = []
                         tokens.push(Bloodhound.tokenizers.whitespace(d['lastname']));
