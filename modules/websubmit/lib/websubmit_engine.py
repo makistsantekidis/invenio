@@ -1924,9 +1924,15 @@ def convert_record_authors_to_json(record_id):
             elif _tuple[0] == 'm':
                 author['email'] = _tuple[1]
         return author
-    authors = [convert_tag_tuple_array_to_author_dictionary(record['100'][0][0])]
-    for author in record['700']:
-        authors.append(convert_tag_tuple_array_to_author_dictionary(author[0]))
+    main_author = record.get('100')
+    authors = []
+    f = open('/tmp/hahahahha','a')
+    f.write(str(record)+"\n\n\n"+str(main_author))
+    f.close()
+    if main_author is not None:
+        authors = [convert_tag_tuple_array_to_author_dictionary(main_author[0][0])]
+    for other_author in record.get('700',[]):
+        authors.append(convert_tag_tuple_array_to_author_dictionary(other_author[0]))
     from json import dumps
     return dumps({'items' : authors}).replace("\"","'")
 

@@ -27,7 +27,14 @@ def dirty_build_authorids_multiple_fileds(author_ids):
         line += '</subfield><subfield code="x">'.join(i)
     return line
 
-
+def encapsulate_id(id_dict,key,value):
+    if key in id_dict and value.strip():
+        f = open('/tmp/lasasasasa','a')
+        f.write(str(id_dict) + " " + str(key) + " "+ str(value)+ "\n")
+        f.close()
+        return id_dict[key]%value
+    else:
+        return value
 
 
 
@@ -50,7 +57,7 @@ def Convert_Field_from_Json(parameters, curdir, form, user_info=None):
     ## separators in case a field has more than one values
     field_key_to_separator = { 'AUTHOR_ID' : '</subfield><subfield code="x">', 'DEMOTHE_AU' : ', '}
 
-
+    authority_container_dictionary = get_dictionary_from_string(parameters.get("authority_container_dictionary",""))
 
 
     filename = "%s/%s" % (curdir,json_field)
@@ -67,14 +74,14 @@ def Convert_Field_from_Json(parameters, curdir, form, user_info=None):
         ## and place them with their transalte from json key in
         ## the field_values dictionary
         for items in obj['items']:
-            field_values.append(reduce(lambda x,y: x.update(y) or x,[{f:None} for f in set(json_key_to_marc_field.itervalues())]))
+            field_values.append(reduce(lambda x,y: x.update(y) or x,[{f:""} for f in set(json_key_to_marc_field.itervalues())]))
             for k,v in items.iteritems():
                 if json_key_to_marc_field.get(k,None):
                     if not field_values[-1].get(json_key_to_marc_field[k],None):
-                        field_values[-1][json_key_to_marc_field[k]] = v
+                        field_values[-1][json_key_to_marc_field[k]] = encapsulate_id(authority_container_dictionary,k,v)
                     else:
                         field_values[-1][json_key_to_marc_field[k]] += \
-                                field_key_to_separator[json_key_to_marc_field[k]] + v
+                                field_key_to_separator[json_key_to_marc_field[k]] + encapsulate_id(authority_container_dictionary,k,v)
 
         files = {}
         fields = [field for field in json_key_to_marc_field.itervalues()]

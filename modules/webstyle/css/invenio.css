@@ -4043,7 +4043,8 @@ img.login_button_small {
 }
 
 .tt-dropdown-menu {
-  width: 650px;
+  height: 500px;
+  overflow-y: scroll;width: 650px;
   margin-top: 12px;
   padding: 8px 0;
   background-color: #fff;
