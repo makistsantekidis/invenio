@@ -1860,10 +1860,10 @@ def prepare_author_sources(curdir, sources):
     f.write('\n'.join(sources) + '\n')
     f.close()
 
-def get_author_autocompletion_form(element, curdir=None, indir=None, doctype=None, access=None, extra_fields={}):
+def get_author_autocompletion_form(element, curdir=None, indir=None, doctype=None, access=None, allow_custom_authors=True, extra_fields={}):
     if curdir:
         indir = curdir.split('/')[-3]
-    return websubmit_templates.tmpl_authors_autocompletion(element, indir=quote_plus(indir), doctype=quote_plus(doctype), access=quote_plus(access), extra_fields=extra_fields)
+    return websubmit_templates.tmpl_authors_autocompletion(element, indir=quote_plus(indir), doctype=quote_plus(doctype), access=quote_plus(access), allow_custom_authors=allow_custom_authors, extra_fields=extra_fields)
 
 def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=None, access=None, ln=CFG_SITE_LANG):
     _ = gettext_set_language(ln)
@@ -1880,6 +1880,7 @@ def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=Non
     user_info = collect_user_info(req)
     SuE = None
     author_sources = None
+
     if indir:
         author_sources = ParamFromFile(os.path.join(CFG_WEBSUBMIT_STORAGEDIR, indir, doctype, access, 'author_sources'))
         SuE = ParamFromFile(os.path.join(CFG_WEBSUBMIT_STORAGEDIR, indir, doctype, access, 'SuE'))
@@ -1887,6 +1888,10 @@ def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=Non
         return [[],"Could not find submission"]
 
     sources = author_sources.split("\n")
+    if not sources:
+        return ([],None)
+
+
     email = user_info['email'] # get email from req
     if email != SuE:
         return [[],"Not Authorized"]
@@ -1906,33 +1911,41 @@ def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=Non
                 raise
     return (result,None)
 
+CFG_SUBFIELFD_TO_JSON_FIELDS = {"a":"name","x": {"id": "id", "SzGeCERN" : "cernccid", "INSPIRE": "inspireid"} ,"c":"contribution","u":"affiliation","m":"email"}
+
+
+def retrieve_authorid_type(id_string):
+    if not id_string or type(id_string) is not str:
+        return ""
+    if id_string.find("|(") != -1 and id_string.split("|(")[1].find(")") != -1:
+        return id_string.split("|(")[1].split(")")[0]
+    return "id"
+
+
+def retrieve_authorid_id(id_string):
+    if not id_string or type(id_string) is not str:
+        return ""
+    if id_string.find("|(") != -1 and id_string.split("|(")[1].find(")") != -1:
+        return id_string.split(")")[1]
+    return ""
+
 def convert_record_authors_to_json(record_id):
     from invenio.search_engine import get_record
     record = get_record(record_id)
     def convert_tag_tuple_array_to_author_dictionary(record_tag):
         author = {}
-        from invenio.websubmit_functions.Shared_Functions import get_dictionary_from_string
-        for _tuple in record_tag:
-            if _tuple[0] == 'a':
-                author['name'] = _tuple[1]
-            elif _tuple[0] == 'x':
-                author['id'] = [str(id) for id in get_dictionary_from_string(_tuple[1])]
-            elif _tuple[0] == 'c':
-                author['contribution'] = _tuple[1]
-            elif _tuple[0] == 'u':
-                author['affiliation'] = _tuple[1]
-            elif _tuple[0] == 'm':
-                author['email'] = _tuple[1]
-        return author
+        return dict((CFG_SUBFIELFD_TO_JSON_FIELDS.get(key) if key != 'x' else CFG_SUBFIELFD_TO_JSON_FIELDS[key].get(retrieve_authorid_type(value),"id"),value.decode("string_escape") \
+                if key!='x' else retrieve_authorid_id(value).decode("string_escape")) for key,value in record_tag)
     main_author = record.get('100')
     authors = []
-    f = open('/tmp/hahahahha','a')
-    f.write(str(record)+"\n\n\n"+str(main_author))
-    f.close()
+
     if main_author is not None:
         authors = [convert_tag_tuple_array_to_author_dictionary(main_author[0][0])]
     for other_author in record.get('700',[]):
         authors.append(convert_tag_tuple_array_to_author_dictionary(other_author[0]))
+    f = open('/tmp/hahahahha','a')
+    f.write(str(authors)+ "\n\n\n\n")
+    f.close()
     from json import dumps
     return dumps({'items' : authors}).replace("\"","'")
 
