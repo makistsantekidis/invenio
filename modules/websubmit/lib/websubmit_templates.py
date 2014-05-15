@@ -2898,11 +2898,23 @@ class Template:
          'help-label': escape_javascript_string(_("Use '\\$' delimiters to write LaTeX markup. Eg: \\$e=mc^{2}\\$")),
          }
 
-    def tmpl_authors_autocompletion(self, element, indir=None, doctype=None, access=None, extra_fields={}):
+    def tmpl_authors_autocompletion(self, element, indir=None, doctype=None, access=None, allow_custom_authors=True, extra_fields={}):
         # _ = gettext_set_language(ln)
         ## <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
         params = ""
         contribution = ""
+        custom_authors = ""
+        if allow_custom_authors:
+            custom_authors = """if (typeof datum === "undefined"){
+                    if (typeof document.getElementById('author_textbox').value === "undefined") return;
+                    datum = {};
+                    author_textbox = document.getElementById('author_textbox').value
+                    datum['lastname'] = author_textbox.split(',')[0]
+                    datum['firstname'] = author_textbox.split(',')[1].split(':')[0].replace(' ','')
+                    datum['affiliation'] = author_textbox.split(':')[1].replace(' ','')
+                    }"""
+
+
         if extra_fields.get('contribution',False):
             contribution = """
                             "<td><label style='flow:left'>Contribution:</label>" +
@@ -2936,14 +2948,7 @@ class Template:
 
 
                 function AppendAuthorToAuthorHiddenInput(object,datum){
-                    if (typeof datum === "undefined"){
-                    if (typeof document.getElementById('author_textbox').value === "undefined") return;
-                    datum = {};
-                    author_textbox = document.getElementById('author_textbox').value
-                    datum['lastname'] = author_textbox.split(',')[0]
-                    datum['firstname'] = author_textbox.split(',')[1].split(':')[0].replace(' ','')
-                    datum['affiliation'] = author_textbox.split(':')[1].replace(' ','')
-                    }
+                    %(custom_authors)s
                     if (!checkAuthorExistence(datum))
                     {
                     authors[++authorindex] = $.extend({}, datum)
@@ -3129,7 +3134,7 @@ class Template:
                 $('#author_textbox').on('typeahead:selected', AppendAuthorToAuthorHiddenInput);
                 $('#author_textbox').on('typeahead:closed',null);
                 $("#author_textbox").css("background-color","rgba(255,255,255,255)");
-                </script>''' % {"name": element['name'], "params": params, "value" : element['value'],  "contribution": contribution}
+                </script>''' % {"name": element['name'], "params": params, "value" : element['value'], "custom_authors":custom_authors, "contribution": contribution}
 
 
 def displaycplxdoc_displayauthaction(action, linkText):
