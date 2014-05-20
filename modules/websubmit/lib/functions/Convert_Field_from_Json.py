@@ -72,21 +72,23 @@ def Convert_Field_from_Json(parameters, curdir, form, user_info=None):
         for items in obj['items']:
             field_values.append(reduce(lambda x,y: x.update(y) or x,[{f:""} for f in set(json_to_tpl_fields.itervalues())]))
             for k,v in items.iteritems():
-                if json_to_tpl_fields.get(k,None):
-                    if not field_values[-1].get(json_to_tpl_fields[k],None):
-                        field_values[-1][json_to_tpl_fields[k]] = encapsulate_id(authority_container_dictionary,k,v)
-                    else:
+                if json_to_tpl_fields.get(k):
+                    if field_values[-1].get(json_to_tpl_fields[k]) and field_key_to_separator.get(json_to_tpl_fields[k]):
                         field_values[-1][json_to_tpl_fields[k]] += \
                                 field_key_to_separator[json_to_tpl_fields[k]] + encapsulate_id(authority_container_dictionary,k,v)
-
+                    else:
+                        field_values[-1][json_to_tpl_fields[k]] = encapsulate_id(authority_container_dictionary,k,v)
         files = {}
-        fields = [field for field in json_to_tpl_fields.itervalues()]
+        fields = [field for field in set(json_to_tpl_fields.itervalues())]
         ## For every field that must be saved in the, use the name
         ## of the previous
         for field in fields:
             fp = open(os.path.join(curdir,field),"w")
             for field_value in field_values:
-                fp.write(str(field_value.get(field,"")).strip().encode('string_escape') + "\n")
+                val = str(field_value.get(field,"")).strip().encode('string_escape')
+                if not val:
+                    val = " "
+                fp.write(val + "\n")
             fp.close()
 
     return ""

@@ -4075,7 +4075,7 @@ img.login_button_small {
 }
 
 
-#author_autocomplete_email_field {
+.author_autocomplete_email_field {
     color: rgb(51, 51, 51);
     cursor: pointer;
     float: right;
@@ -4089,7 +4089,7 @@ img.login_button_small {
     outline: rgb(51, 51, 51) none 0px;
 }/*websubmit author autocompletion */
 
-#author_autocomplete_name_field {
+.author_autocomplete_name_field {
     color: rgb(51, 51, 51);
     cursor: pointer;
     height: auto;
@@ -4102,7 +4102,7 @@ img.login_button_small {
     outline: rgb(51, 51, 51) none 0px;
 }/*websubmit author autocompletion */
 
-#author_autocomplete_affiliation_field {
+.author_autocomplete_affiliation_field {
     color: rgb(51, 51, 51);
     cursor: pointer;
     height: auto;
