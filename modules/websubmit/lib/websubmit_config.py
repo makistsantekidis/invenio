@@ -54,6 +54,10 @@ CFG_RESERVED_SUBMISSION_FILENAMES = ['SuE',
 ## Prefix for video uploads, Garbage Collector
 CFG_WEBSUBMIT_TMP_VIDEO_PREFIX = "video_upload_"
 
+
+
+CFG_SUBFIELFD_TO_JSON_FIELDS = {"a":"name","x": {"id": "id", "SzGeCERN" : "cernccid", "INSPIRE": "inspireid"} ,"c":"contribution","u":"affiliation","m":"email"}
+
 class InvenioWebSubmitFunctionError(Exception):
     """This exception should only ever be raised by WebSubmit functions.
        It will be caught and handled by the WebSubmit core itself.

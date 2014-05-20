@@ -49,6 +49,7 @@ from invenio.webpage import page, error_page, warning_page
 from invenio.webuser import getUid, get_email, collect_user_info, isGuestUser, \
                             page_not_authorized
 from invenio.websubmit_config import CFG_RESERVED_SUBMISSION_FILENAMES, \
+                                     CFG_SUBFIELFD_TO_JSON_FIELDS, \
     InvenioWebSubmitFunctionError, InvenioWebSubmitFunctionStop, \
     InvenioWebSubmitFunctionWarning
 from invenio.messages import gettext_set_language, wash_language
@@ -1860,10 +1861,10 @@ def prepare_author_sources(curdir, sources):
     f.write('\n'.join(sources) + '\n')
     f.close()
 
-def get_author_autocompletion_form(element, curdir=None, indir=None, doctype=None, access=None, allow_custom_authors=True, extra_fields={}):
+def get_author_autocompletion_form(element, curdir=None, indir=None, doctype=None, access=None, allow_custom_authors=True, extra_fields={}, ln=CFG_SITE_LANG):
     if curdir:
         indir = curdir.split('/')[-3]
-    return websubmit_templates.tmpl_authors_autocompletion(element, indir=quote_plus(indir), doctype=quote_plus(doctype), access=quote_plus(access), allow_custom_authors=allow_custom_authors, extra_fields=extra_fields)
+    return websubmit_templates.tmpl_authors_autocompletion(element, indir=quote_plus(indir), doctype=quote_plus(doctype), access=quote_plus(access), allow_custom_authors=allow_custom_authors, extra_fields=extra_fields, ln=CFG_SITE_LANG)
 
 def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=None, access=None, ln=CFG_SITE_LANG):
     _ = gettext_set_language(ln)
@@ -1911,7 +1912,6 @@ def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=Non
                 raise
     return (result,None)
 
-CFG_SUBFIELFD_TO_JSON_FIELDS = {"a":"name","x": {"id": "id", "SzGeCERN" : "cernccid", "INSPIRE": "inspireid"} ,"c":"contribution","u":"affiliation","m":"email"}
 
 
 def retrieve_authorid_type(id_string):
@@ -1934,8 +1934,16 @@ def convert_record_authors_to_json(record_id):
     record = get_record(record_id)
     def convert_tag_tuple_array_to_author_dictionary(record_tag):
         author = {}
-        return dict((CFG_SUBFIELFD_TO_JSON_FIELDS.get(key) if key != 'x' else CFG_SUBFIELFD_TO_JSON_FIELDS[key].get(retrieve_authorid_type(value),"id"),value.decode("string_escape") \
-                if key!='x' else retrieve_authorid_id(value).decode("string_escape")) for key,value in record_tag)
+        for _tuple in record_tag:
+            if _tuple[0] == 'x':
+                if CFG_SUBFIELFD_TO_JSON_FIELDS['x'].get(retrieve_authorid_type(_tuple[1])):
+                   author[CFG_SUBFIELFD_TO_JSON_FIELDS['x'].get(retrieve_authorid_type(_tuple[1]))] = retrieve_authorid_id(_tuple[1]).decode("string_escape")
+            else:
+                if CFG_SUBFIELFD_TO_JSON_FIELDS.get(_tuple[0]):
+                    if (not _tuple[1] == " ") and _tuple[1]:
+                        author[CFG_SUBFIELFD_TO_JSON_FIELDS.get(_tuple[0])] = _tuple[1].decode("string_escape")
+
+        return author
     main_author = record.get('100')
     authors = []
 
@@ -1943,19 +1951,8 @@ def convert_record_authors_to_json(record_id):
         authors = [convert_tag_tuple_array_to_author_dictionary(main_author[0][0])]
     for other_author in record.get('700',[]):
         authors.append(convert_tag_tuple_array_to_author_dictionary(other_author[0]))
-    f = open('/tmp/hahahahha','a')
-    f.write(str(authors)+ "\n\n\n\n")
-    f.close()
     from json import dumps
     return dumps({'items' : authors}).replace("\"","'")
-
-
-
-
-
-
-
-
 
 
 

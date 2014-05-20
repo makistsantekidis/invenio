@@ -2898,8 +2898,8 @@ class Template:
          'help-label': escape_javascript_string(_("Use '\\$' delimiters to write LaTeX markup. Eg: \\$e=mc^{2}\\$")),
          }
 
-    def tmpl_authors_autocompletion(self, element, indir=None, doctype=None, access=None, allow_custom_authors=True, extra_fields={}):
-        # _ = gettext_set_language(ln)
+    def tmpl_authors_autocompletion(self, element, indir=None, doctype=None, access=None, allow_custom_authors=True, extra_fields={}, ln=CFG_SITE_LANG):
+        _ = gettext_set_language(ln)
         ## <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
         params = ""
         contribution = ""
@@ -2913,7 +2913,11 @@ class Template:
                     datum['firstname'] = author_textbox.split(',')[1].split(':')[0].replace(' ','')
                     datum['affiliation'] = author_textbox.split(':')[1].replace(' ','')
                     }"""
-
+        else:
+            custom_authors = """if (typeof datum === "undefined"){
+            if (typeof document.getElementById('author_textbox').value === "undefined") return;
+            alert("%s")
+            }""" % _("Custom authors are not allowed. Insteal, please choose an author from the suggestions.\\nIf you think this is a mistake please contact the administrator")
 
         if extra_fields.get('contribution',False):
             contribution = """
@@ -2974,7 +2978,7 @@ class Template:
                     if (contribution == undefined)
                     { contribution = "" ;}
                     newRow = "<div class='websubmit_authors_list' style='position:relative;'><table><tr>" +
-                        "<td style='width:100px;margin-right:20px;'>" + Name +  "</td>" +
+                        "<td id='author_"+index+"' style='width:100px;margin-right:20px;'>" + Name +  "</td>" +
                         "<td style='margin-right:25px;margin-left:160px;margin-bottom:5px;' >" + affiliation + "</td>" +
                         "<div style='position:absolute;top:5px;right:5px'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></div>" +
                         "<tr/><tr></table><table>" +
@@ -3037,7 +3041,8 @@ class Template:
                     var obj = JSON && JSON.parse(json) || $.parseJSON(json);
                     for (var i in obj['items']){
                         authors[i] = obj['items'][i];
-                        appendRow(authors[i]['name'],authors[i]['affiliation'],i,authors[i]['contribution'])
+                        appendRow(authors[i]['name'],authors[i]['affiliation'],authorindex,authors[i]['contribution'])
+                        authorindex++;
                     }
                 }
 
@@ -3088,6 +3093,10 @@ class Template:
                     };
                   }
                 // END IE COMBATIBILITY
+                var positionCounter = 1;
+                Handlebars.registerHelper('position', function() {
+                    return positionCounter++;
+                });
                 var engine = new Bloodhound({
                     name: 'authors',
                     limit: 40,
@@ -3125,14 +3134,17 @@ class Template:
                 displayKey: dispkey,
                 templates: {
                    suggestion: Handlebars.compile([
-                '<p id="author_autocomplete_email_field" >{{email}}</p>',
-                '<p id="author_autocomplete_name_field">{{lastname}} {{firstname}} {{name}}</p>',
-                '<p id="author_autocomplete_affiliation_field">{{affiliation}}</p>'
+                '<div id="autocomplete_element_{{position}}"><p class="author_autocomplete_email_field">{{email}}</p>',
+                '<p class="author_autocomplete_name_field">{{lastname}} {{firstname}} {{name}}</p>',
+                '<p class="author_autocomplete_affiliation_field">{{affiliation}}</p></div>'
                 ].join(''))},
                 source: engine.ttAdapter()
                 });
                 $('#author_textbox').on('typeahead:selected', AppendAuthorToAuthorHiddenInput);
                 $('#author_textbox').on('typeahead:closed',null);
+                $('#author_textbox').on('typeahead:cursorchanged',null);
+                $('#author_textbox').on('typeahead:autocompleted',null);
+                $('#author_textbox').on('typeahead:opened',null);
                 $("#author_textbox").css("background-color","rgba(255,255,255,255)");
                 </script>''' % {"name": element['name'], "params": params, "value" : element['value'], "custom_authors":custom_authors, "contribution": contribution}
 
