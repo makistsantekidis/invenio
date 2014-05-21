@@ -49,6 +49,7 @@ def format_element(bfo):
     control_nos = filter(None, control_nos) # fastest way to remove empty ""s
     previous_recIDs = []
     parameters = []
+    count = None
     publications_formatted = []
     for control_no in control_nos:
 #        recIDs = []
@@ -103,7 +104,7 @@ def format_element(bfo):
     "&sc=1" + \
     "&ln=" + bfo.lang
     prefix = prefix_pattern % url_str
-    content += prefix + "See all publications..." + postfix
+    content += prefix + "See all " + str(count) + " publications..." + postfix
 
     return "<p>" + title + ": " + content + "</p>"
 
