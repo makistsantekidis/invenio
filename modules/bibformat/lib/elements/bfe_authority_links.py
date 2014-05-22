@@ -56,7 +56,7 @@ def format_element(bfo):
             viaf_id = control_no.split("|(VIAF)")[1]
             link_to_wikipedia = get_wiki_link_from_bfo(bfo)
             if not link_to_wikipedia:
-            link_to_wikipedia = get_wikipedia_link(viaf_id)
+                link_to_wikipedia = get_wikipedia_link(viaf_id)
             # Wikipedia link with wiki icon
             image_element = image_pattern % { "style": style, "text": "Wikipedia link", "image": "wikipedia.png", "external_article": link_to_wikipedia}
             links_formatted.append(image_element)
