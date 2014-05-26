@@ -15,11 +15,12 @@
 ## along with Invenio; if not, write to the Free Software Foundation, Inc.,
 ## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
-SUBDIRS = functions
+SUBDIRS = author_sources_plugins functions
 
 pylibdir = $(libdir)/python/invenio
 
-pylib_DATA = websubmit_config.py websubmit_engine.py \
+pylib_DATA = websubmit_config.py \
+	     websubmit_engine.py \
              websubmit_dblayer.py \
              websubmit_webinterface.py \
              websubmit_templates.py \
@@ -43,11 +44,6 @@ metadataplugin_DATA = __init__.py \
                       wsm_pyexiv2_plugin.py \
                       wsm_pdftk_plugin.py
 
-autocompleteplugindir = $(libdir)/python/invenio/websubmit_author_sources_plugins
-autocompleteplugin_DATA = __init__.py \
-			     atlas.py \
-			     ldap_search.py
-
-EXTRA_DIST = $(pylib_DATA) $(metadataplugin_DATA) $(autocompleteplugin_DATA)
+EXTRA_DIST = $(pylib_DATA) $(metadataplugin_DATA)
 
 CLEANFILES = *~ *.tmp *.pyc

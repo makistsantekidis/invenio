@@ -58,6 +58,12 @@ CFG_WEBSUBMIT_TMP_VIDEO_PREFIX = "video_upload_"
 
 CFG_SUBFIELFD_TO_JSON_FIELDS = {"a":"name","x": {"id": "id", "SzGeCERN" : "cernccid", "INSPIRE": "inspireid"} ,"c":"contribution","u":"affiliation","m":"email"}
 
+CFG_JSON_TO_TPL_FIELDS =  {"id": "AUTHOR_ID","inspireid":"AUTHOR_ID", "name": "DEMOTHE_AU", "firstname" : "DEMOTHE_AU", "lastname" : "DEMOTHE_AU", "cernccid" : "AUTHOR_ID" , "affiliation" : "AUTHOR_AFFILIATION", "email" : "AUTHOR_EMAIL", "contribution": "AUTHOR_CONTRIBUTION"}
+
+CFG_AUTHORITY_CONTAINER_DICTIONARY = {"id": "AUTHOR|(ID)%s","inspireid":"AUTHOR|(INSPIRE)%s", "cernccid" : "AUTHOR|(SzGeCERN)%s"}
+
+CFG_TPL_FIELDS = reduce(lambda x,y: x.update(y) or x,[{f:""} for f in set(CFG_JSON_TO_TPL_FIELDS.itervalues())])
+
 class InvenioWebSubmitFunctionError(Exception):
     """This exception should only ever be raised by WebSubmit functions.
        It will be caught and handled by the WebSubmit core itself.
