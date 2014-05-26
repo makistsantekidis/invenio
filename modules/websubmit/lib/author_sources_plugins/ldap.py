@@ -2,7 +2,7 @@ from invenio.bibcirculation_cern_ldap import _cern_ldap_login,_ldap_connection_p
 from thread import get_ident
 from time import sleep
 
-CFG_SOURCE_NAME = "ldap_search"
+CFG_SOURCE_NAME = "ldap"
 
 def query_author_source(nickname):
     """Query the CERN LDAP server for information about a user.
@@ -23,11 +23,7 @@ def query_author_source(nickname):
         results = connection.search_st(CFG_CERN_LDAP_BASE, ldap.SCOPE_SUBTREE,
                                 query_filter, timeout=5)
     except ldap.LDAPError:
-        ## Mmh.. connection error? Let's reconnect at least once just in case
-        sleep(1)
-        connection = _ldap_connection_pool[get_ident()] = _cern_ldap_login()
-        results = connection.search_st(CFG_CERN_LDAP_BASE, ldap.SCOPE_SUBTREE,
-                                query_filter, timeout=10)
+        return {}
 
     formated_results = []
 
@@ -35,17 +31,3 @@ def query_author_source(nickname):
         formated_results.append({'name' : result[1]['displayName'][0], 'email' : result[1]['mail'][0], 'affiliation': result[1].get('cernInstituteName',['CERN'])[0]})
 
     return formated_results
-    ## if len(results) > 1:
-    ##     ## Maybe one ExCern and primary at the same time. In this case let's give precedence to ExCern
-    ##     types = {}
-    ##     for result in results:
-    ##         types[result[1]['employeeType'][0]] = result[1]
-    ##     if 'ExCern' in types and 'Primary' in types:
-    ##         return types['ExCern']
-    ##     if 'Primary' in types:
-    ##         return types['Primary']
-    ##     ## Ok otherwise we just pick up something :-)
-    ## if results:
-    ##     return results[0][1]
-    ## else:
-    ##     return {}
