@@ -1,5 +1,5 @@
 ## This file is part of Invenio.
-## Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011 CERN.
+## Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 CERN.
 ##
 ## Invenio is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -2921,20 +2921,16 @@ class Template:
 
         if extra_fields.get('contribution',False):
             contribution = """
-                            "<td><label style='flow:left'>Contribution:</label>" +
-                        "<textarea id='contribution_textfield_" + index + "' style='margin-left:20px;vertical-align:text-top;' onkeyup='add_author_extra_field(this,"+index+",\\"contribution\\")'>"+contribution+"</textarea></td>" +
+                            "<td><label style='flow:left;'>Contribution:</label>" +
+                        "<textarea id='contribution_textfield_" + index + "' style='margin-left:20px;vertical-align:text-top;width:300px;height:80px;' onkeyup='add_author_extra_field(this,"+index+",\\"contribution\\")'>"+contribution+"</textarea></td>" +
                         """
         from urllib2 import quote
         if indir:
             params = 'indir=%(indir)s&doctype=%(doctype)s&access=%(access)s' % { "indir": quote(indir), "doctype": quote(doctype), "access": quote(access) }
         return '''<div style="font-size:small;">To add custom Authors use the format: <br> <i>Lastname, Firstname: Affiliation </i></div>
-                 <div style="width:100%%; display:table;">
-                 <div style="display:table-row">
-                 <div style="display:table-cell;width:50%%">
-                 <input style="display:table-cell; width:300px; background-color: rgb(255, 255, 255);" id="author_textbox" placeholder="Type to find authors" name="add_author" class="typeahead"/>
-                 </div>
-                 <button style="display: table-cell;" align="left" valign="top" onclick="AppendAuthorToAuthorHiddenInput()">Add Author</button>
-                 </div>
+                 <div style="white-space:nowrap;">
+                 <input style="width:300px; background-color: rgb(255, 255, 255);" valign="top" id="author_textbox" placeholder="Type to find authors" name="add_author" class="typeahead"/>
+                 <button onclick="AppendAuthorToAuthorHiddenInput()">Add Author</button>
                  </div>
                  <div id="websubmit_authors_table">
                 </div>
@@ -2958,12 +2954,12 @@ class Template:
                     authors[++authorindex] = $.extend({}, datum)
                     if ("firstname" in authors[authorindex])
                     {
-                        authors[authorindex]['name'] = authors[authorindex]['firstname']+ ", "+authors[authorindex]['lastname']
+                        authors[authorindex]['name'] = authors[authorindex]['lastname']+ ", "+authors[authorindex]['firstname']
                         delete authors[authorindex]['firstname'];
                         delete authors[authorindex]['lastname'];
                     }
                     if (datum['firstname'] != undefined){
-                    appendRow(datum['firstname']+", "+datum['lastname'],datum['affiliation'],authorindex,"");
+                    appendRow(datum['lastname']+", "+datum['firstname'],datum['affiliation'],authorindex,"");
                     }
                     else{
                     appendRow(datum['name'],datum['affiliation'],authorindex,"");
@@ -3009,7 +3005,7 @@ class Template:
                     var value_array = []
                     value_array.push(datum['affiliation'])
                     if ('name' in datum) value_array.push(datum['name'])
-                    if ('firstname' in datum) value_array.push(datum['firstname']+", " + datum['lastname'])
+                    if ('firstname' in datum) value_array.push(datum['lastname']+", " + datum['firstname'])
 
                     if (Object.keys(authors).length === 0){return false}
                     for (var key in authors) {
