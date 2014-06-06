@@ -71,10 +71,11 @@ def Convert_Field_from_Json(parameters, curdir, form, user_info=None):
         ## For every field that must be saved in the, use the name
         ## of the previous
         for field in fields:
-            attributes_to_write = ""
+            attributes_to_write = []
             for field_value in field_values:
                 val = str(field_value.get(field,"")).strip().encode('string_escape')
                 if not val:
-                    val = " "
-                attributes_to_write += val + "\n"
+                    val = "#None#"
+                attributes_to_write.append(val)
+            attributes_to_write = "\n".join(attributes_to_write)
             write_file(os.path.join(curdir,field),attributes_to_write)
