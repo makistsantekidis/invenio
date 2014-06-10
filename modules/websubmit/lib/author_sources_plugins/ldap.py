@@ -15,11 +15,13 @@
 ## along with Invenio; if not, write to the Free Software Foundation, Inc.,
 ## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
-from invenio.bibcirculation_cern_ldap import _cern_ldap_login,_ldap_connection_pool,ldap,CFG_CERN_LDAP_BASE
+from invenio.bibcirculation_cern_ldap import _cern_ldap_login,_ldap_connection_pool,CFG_CERN_LDAP_BASE
 from thread import get_ident
 from time import sleep
 
 CFG_SOURCE_NAME = "ldap"
+
+
 
 def query_author_source(nickname):
     """Query the CERN LDAP server for information about a user.
