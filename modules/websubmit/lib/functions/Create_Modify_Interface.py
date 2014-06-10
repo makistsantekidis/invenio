@@ -247,10 +247,6 @@ def Create_Modify_Interface(parameters, curdir, form, user_info=None):
         if date_conversion_setting != 'none':
             # If field is a date value, transform date into format DD/MM/YYYY:
             value = Create_Modify_Interface_transform_date(value)
-        ff = open("/tmp/skalalalalala","a")
-        ff.write("value: " + str(value)+ "\n")
-        ff.write("marccode: " + str(marccode)+"\n")
-        ff.write("field: " + str(field)+"\n")
         res = run_sql("SELECT * FROM sbmFIELDDESC WHERE name=%s", (field,))
         if len(res) > 0:
             element_type = res[0][3]
@@ -310,7 +306,7 @@ def Create_Modify_Interface(parameters, curdir, form, user_info=None):
                     ## Create_Modify_Interface has already been parsed by
                     ## execfile within a protected environment.
                     the_globals['text'] = ''
-                    the_globals['access'] = curdir.split('/')[-1]
+                    the_globals['access'] = curdir.split('/')[-1] if os.path.exists(curdir) else ''
                     the_globals['element'] = {"name" : field , "value": value }
                     exec co in the_globals
                     text = the_globals['text']
@@ -322,7 +318,6 @@ def Create_Modify_Interface(parameters, curdir, form, user_info=None):
                 text = "%s: unknown field type" % field
             t = t + "<small>%s</small>" % text
 
-        ff.close()
     # output our flag field
     t += '<input type="hidden" name="Create_Modify_Interface_DONE" value="DONE\n" />'
 

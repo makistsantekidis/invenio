@@ -3098,7 +3098,7 @@ class Template:
                     limit: 40,
                     local: [],
                     remote: {
-                             url : 'http://pcuds55.cern.ch/submit/get_author_list?author=%%QUERY&%(params)s',
+                             url : 'http://%{site_name}s/submit/get_author_list?author=%%QUERY&%(params)s',
                              rateLimitWait : 500
                             },
                     datumTokenizer: function(d) {
@@ -3142,7 +3142,7 @@ class Template:
                 $('#author_textbox').on('typeahead:autocompleted',null);
                 $('#author_textbox').on('typeahead:opened',null);
                 $("#author_textbox").css("background-color","rgba(255,255,255,255)");
-                </script>''' % {"name": element['name'], "params": params, "value" : element['value'], "custom_authors":custom_authors, "contribution": contribution}
+                </script>''' % {"name": element['name'], "params": params, "value" : element['value'], "custom_authors":custom_authors, "contribution": contribution, "site_name":CFG_SITE_URL }
 
 
 def displaycplxdoc_displayauthaction(action, linkText):
