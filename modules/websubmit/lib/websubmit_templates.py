@@ -2904,6 +2904,8 @@ class Template:
         params = ""
         contribution = ""
         custom_authors = ""
+        custom_author_use_text = ""
+        custom_author_submit_button = ""
         if allow_custom_authors:
             custom_authors = """if (typeof datum === "undefined"){
                     if (typeof document.getElementById('author_textbox').value === "undefined") return;
@@ -2913,6 +2915,8 @@ class Template:
                     datum['firstname'] = author_textbox.split(',')[1].split(':')[0].replace(' ','')
                     datum['affiliation'] = author_textbox.split(':')[1].replace(' ','')
                     }"""
+            custom_author_use_text = '''<br>To add custom Authors use the format: <i>Lastname, Firstname: Affiliation </i>'''
+            custom_author_submit_button = '''<button style="vertical-align:bottom; height:40px;" onclick="AppendAuthorToAuthorHiddenInput()">Add Author</button>'''
         else:
             custom_authors = """if (typeof datum === "undefined"){
             if (typeof document.getElementById('author_textbox').value === "undefined") return;
@@ -2927,14 +2931,16 @@ class Template:
         from urllib2 import quote
         if indir:
             params = 'indir=%(indir)s&doctype=%(doctype)s&access=%(access)s' % { "indir": quote(indir), "doctype": quote(doctype), "access": quote(access) }
-        return '''<div style="font-size:small;">To add custom Authors use the format: <br> <i>Lastname, Firstname: Affiliation </i></div>
+        return '''<div style="font-size:small;"> Begin to type an author name and suggestion will be presented on a dropdown <br>
+                    Choose one and it will be added to the current author list
+                    %(custom_author_use_text)s</div>
                  <div style="white-space:nowrap;">
                  <input style="width:300px; background-color: rgb(255, 255, 255);" valign="top" id="author_textbox" placeholder="Type to find authors" name="add_author" class="typeahead"/>
-                 <button onclick="AppendAuthorToAuthorHiddenInput()">Add Author</button>
+                 %(custom_author_submit_button)s
                  </div>
                  <div id="websubmit_authors_table">
                 </div>
-                <input type="hidden" id="authors_input" name="%(name)s" value="%(value)s"/>
+                <input type="hidden" id="json_authors_input" name="%(name)s" value="%(value)s"/>
                 <script type="text/javascript" src="/js/handlebars.min.js"></script>
                 <script type="text/javascript" src="/js/typeahead.bundle.min.js"></script>
                 <script type="text/javascript" src="/js/json2.js"></script>
@@ -3023,17 +3029,17 @@ class Template:
                 }
 
                 function exportAuthorsToTextarea(){
-                    document.getElementById('authors_input').value = "";
+                    document.getElementById('json_authors_input').value = "";
                     var items_array = {"items":[]};
                     for (var key in authors) {
                         items_array["items"].push(authors[key])
                     }
-                    document.getElementById('authors_input').value = JSON.stringify(items_array);
+                    document.getElementById('json_authors_input').value = JSON.stringify(items_array);
 
                 }
 
                 function importAuthorsFromInput(){
-                    var json = document.getElementById('authors_input').value.split("'").join("\\"")
+                    var json = document.getElementById('json_authors_input').value.split("'").join("\\"")
                     var obj = JSON && JSON.parse(json) || $.parseJSON(json);
                     for (var i in obj['items']){
                         authors[i] = obj['items'][i];
@@ -3098,7 +3104,7 @@ class Template:
                     limit: 40,
                     local: [],
                     remote: {
-                             url : 'http://%{site_name}s/submit/get_author_list?author=%%QUERY&%(params)s',
+                             url : '%(site_name)s/submit/get_author_list?author=%%QUERY&%(params)s',
                              rateLimitWait : 500
                             },
                     datumTokenizer: function(d) {
@@ -3115,7 +3121,7 @@ class Template:
                     });
 
 
-                if (document.getElementById('authors_input').value != "" && document.getElementById('authors_input').value != "None")
+                if (document.getElementById('json_authors_input').value != "" && document.getElementById('json_authors_input').value != "None")
                 {
                     importAuthorsFromInput();
 
@@ -3142,7 +3148,8 @@ class Template:
                 $('#author_textbox').on('typeahead:autocompleted',null);
                 $('#author_textbox').on('typeahead:opened',null);
                 $("#author_textbox").css("background-color","rgba(255,255,255,255)");
-                </script>''' % {"name": element['name'], "params": params, "value" : element['value'], "custom_authors":custom_authors, "contribution": contribution, "site_name":CFG_SITE_URL }
+                </script>''' % {"name": element['name'], "params": params, "value" : element['value'], "custom_authors":custom_authors, "contribution": contribution, "site_name":CFG_SITE_URL, \
+                        "custom_author_submit_button": custom_author_submit_button, "custom_author_use_text" : custom_author_use_text  }
 
 
 def displaycplxdoc_displayauthaction(action, linkText):

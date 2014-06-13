@@ -311,7 +311,12 @@ class InvenioWebSubmitWebTest(InvenioWebTestCase):
                                              'Your document has the following reference(s): <b>CERN-GE-9806033'])
 
     def test_autocompletion_authors(self):
-        sel = self##.selenium
+
+        self.browser.get(CFG_SITE_SECURE_URL)
+        self.login(username="admin", password="")
+        self.browser.get(CFG_SITE_SECURE_URL+'/submit?ln=en&doctype=DEMOTHE')
+
+        sel = self.selenium
         sel.open("/?")
         sel.click("link=Submit")
         sel.wait_for_page_to_load("30000")
