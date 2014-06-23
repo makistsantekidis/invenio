@@ -178,7 +178,6 @@ def Create_Modify_Interface(parameters, curdir, form, user_info=None):
     if parameters.has_key('dates_conversion'):
         date_conversion_setting = parameters['dates_conversion']
     # Path of file containing fields to modify
-
     the_globals = {
         'doctype' : doctype,
         'action' : action,
@@ -306,7 +305,7 @@ def Create_Modify_Interface(parameters, curdir, form, user_info=None):
                     ## Create_Modify_Interface has already been parsed by
                     ## execfile within a protected environment.
                     the_globals['text'] = ''
-                    the_globals['access'] = curdir.split('/')[-1] if os.path.exists(curdir) else ''
+                    the_globals['access'] = form.get('access',None)
                     the_globals['element'] = {"name" : field , "value": value }
                     exec co in the_globals
                     text = the_globals['text']

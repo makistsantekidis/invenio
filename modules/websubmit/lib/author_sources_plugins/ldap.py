@@ -18,7 +18,7 @@
 from invenio.bibcirculation_cern_ldap import _cern_ldap_login,_ldap_connection_pool,CFG_CERN_LDAP_BASE
 from thread import get_ident
 from time import sleep
-
+import ldap
 CFG_SOURCE_NAME = "ldap"
 
 

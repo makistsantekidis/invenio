@@ -2926,7 +2926,7 @@ class Template:
         if extra_fields.get('contribution',False):
             contribution = """
                             "<td><label style='flow:left;'>Contribution:</label>" +
-                        "<textarea id='contribution_textfield_" + index + "' style='margin-left:20px;vertical-align:text-top;width:300px;height:80px;' onkeyup='add_author_extra_field(this,"+index+",\\"contribution\\")'>"+contribution+"</textarea></td>" +
+                        "<textarea id='contribution_textfield_" + index + "' style='margin-left:20px;vertical-align:text-top;width:300px;height:15px;' onkeyup='add_author_extra_field(this,"+index+",\\"contribution\\")'>"+contribution+"</textarea></td>" +
                         """
         from urllib2 import quote
         if indir:
@@ -2937,6 +2937,7 @@ class Template:
                  <div style="white-space:nowrap;">
                  <input style="width:300px; background-color: rgb(255, 255, 255);" valign="top" id="author_textbox" placeholder="Type to find authors" name="add_author" class="typeahead"/>
                  %(custom_author_submit_button)s
+                 <img id="loading_gif" style="height:35px;width:35px;vertical-align:bottom;visibility: hidden;" src="/img/spinner_large.gif">
                  </div>
                  <div id="websubmit_authors_table">
                 </div>
@@ -2958,6 +2959,11 @@ class Template:
                     if (!checkAuthorExistence(datum))
                     {
                     authors[++authorindex] = $.extend({}, datum)
+                    if (datum['name'] == no_authors_found_message)
+                    {
+                        $('.typeahead').typeahead('val', '');
+                        return;
+                    }
                     if ("firstname" in authors[authorindex])
                     {
                         authors[authorindex]['name'] = authors[authorindex]['lastname']+ ", "+authors[authorindex]['firstname']
@@ -2973,7 +2979,7 @@ class Template:
 
 
                     }
-                    $('#author_textbox').val("");
+                    $('.typeahead').typeahead('val', '');
                 }
 
                 function appendRow(Name,affiliation,index,contribution) {
@@ -3095,6 +3101,7 @@ class Template:
                     };
                   }
                 // END IE COMBATIBILITY
+                var no_authors_found_message = "No Authors found"
                 var positionCounter = 1;
                 Handlebars.registerHelper('position', function() {
                     return positionCounter++;
@@ -3105,6 +3112,23 @@ class Template:
                     local: [],
                     remote: {
                              url : '%(site_url)s/submit/get_author_list?author=%%QUERY&%(params)s',
+                             ajax: {
+                             beforeSend: function(){ $("#loading_gif").css('visibility','visible');},
+                             complete: function(){ $("#loading_gif").css('visibility','hidden'); }
+                             },
+                             filter: function(parsedResponse) {
+                                 var dataset = [];
+                                 if (parsedResponse.length == 0) {
+                                    dataset.push({
+                                    'name' : no_authors_found_message,
+                                    'affiliation' : 'The query did not return any authors from the current sources'
+                                    })
+                                 }
+                                 else {
+                                    dataset = parsedResponse
+                                 }
+                                 return dataset;
+                               },
                              rateLimitWait : 500
                             },
                     datumTokenizer: function(d) {
@@ -3126,6 +3150,15 @@ class Template:
                     importAuthorsFromInput();
 
                 }
+                Handlebars.registerHelper('equal', function(lvalue, rvalue, options) {
+                    if (arguments.length < 3)
+                        throw new Error("Handlebars Helper equal needs 2 parameters");
+                    if( lvalue!=rvalue ) {
+                        return options.inverse(this);
+                    } else {
+                        return options.fn(this);
+                    }
+                });
                 engine.initialize();
                 $('.typeahead').typeahead({
                     highlight: true,
@@ -3136,7 +3169,7 @@ class Template:
                 displayKey: dispkey,
                 templates: {
                    suggestion: Handlebars.compile([
-                '<div id="autocomplete_element_{{position}}"><p class="author_autocomplete_email_field">{{email}}</p>',
+                '<div {{#equal name "No Authors found"}} disabled="disabled" {{/equal}} id="autocomplete_element_{{position}}"><p class="author_autocomplete_email_field">{{email}}</p>',
                 '<p class="author_autocomplete_name_field">{{lastname}} {{firstname}} {{name}}</p>',
                 '<p class="author_autocomplete_affiliation_field">{{affiliation}}</p></div>'
                 ].join(''))},
@@ -3144,9 +3177,6 @@ class Template:
                 });
                 $('#author_textbox').on('typeahead:selected', AppendAuthorToAuthorHiddenInput);
                 $('#author_textbox').on('typeahead:closed',null);
-                $('#author_textbox').on('typeahead:cursorchanged',null);
-                $('#author_textbox').on('typeahead:autocompleted',null);
-                $('#author_textbox').on('typeahead:opened',null);
                 $("#author_textbox").css("background-color","rgba(255,255,255,255)");
                 </script>''' % {"name": element['name'], "params": params, "value" : element['value'], "custom_authors":custom_authors, "contribution": contribution, "site_url":CFG_SITE_URL, \
                         "custom_author_submit_button": custom_author_submit_button, "custom_author_use_text" : custom_author_use_text  }
