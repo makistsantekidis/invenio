@@ -315,6 +315,9 @@ class InvenioWebSubmitWebTest(InvenioWebTestCase):
         self.browser.get(CFG_SITE_SECURE_URL)
         self.login(username="admin", password="")
         self.browser.get(CFG_SITE_SECURE_URL+'/submit?ln=en&doctype=DEMOTHE')
+        self.find_element_by_xpath_with_timeout("//input[@value='Submit New Record']")
+        self.browser.find_element_by_xpath("//input[@value='Submit New Record']").click()
+
 
         sel = self.selenium
         sel.open("/?")

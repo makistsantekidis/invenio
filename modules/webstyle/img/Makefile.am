@@ -207,6 +207,7 @@ img_DATA = add-small.png \
            smchk_rd.gif \
            sn.gif \
            sp.gif \
+	   spinner_large.gif \
            star-icon-30x30.gif \
            star_dot-icon-30x30.gif \
            star_empty-icon-30x30.gif \
