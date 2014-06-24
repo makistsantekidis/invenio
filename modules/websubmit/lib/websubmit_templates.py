@@ -2937,7 +2937,7 @@ class Template:
                  <div style="white-space:nowrap;">
                  <input style="width:300px; background-color: rgb(255, 255, 255);" valign="top" id="author_textbox" placeholder="Type to find authors" name="add_author" class="typeahead"/>
                  %(custom_author_submit_button)s
-                 <img id="loading_gif" style="height:35px;width:35px;vertical-align:bottom;visibility: hidden;" src="/img/spinner_large.gif">
+                 <img id="loading_gif" style="height:35px;width:35px;vertical-align:bottom;visibility: hidden;" src="/img/loading.gif">
                  </div>
                  <div id="websubmit_authors_table">
                 </div>
@@ -2958,13 +2958,14 @@ class Template:
                     %(custom_authors)s
                     if (!checkAuthorExistence(datum))
                     {
-                    authors[++authorindex] = $.extend({}, datum)
                     if (datum['name'] == no_authors_found_message)
                     {
                         $('.typeahead').typeahead('val', '');
                         return;
                     }
-                    if ("firstname" in authors[authorindex])
+
+                    authors[++authorindex] = $.extend({}, datum)
+                                       if ("firstname" in authors[authorindex])
                     {
                         authors[authorindex]['name'] = authors[authorindex]['lastname']+ ", "+authors[authorindex]['firstname']
                         delete authors[authorindex]['firstname'];
@@ -2996,6 +2997,7 @@ class Template:
                     $('#websubmit_authors_table').append(newRow);
 
                     exportAuthorsToTextarea();
+                    positionCounter=1;
                 }
 
 
@@ -3049,8 +3051,7 @@ class Template:
                     var obj = JSON && JSON.parse(json) || $.parseJSON(json);
                     for (var i in obj['items']){
                         authors[i] = obj['items'][i];
-                        appendRow(authors[i]['name'],authors[i]['affiliation'],authorindex,authors[i]['contribution'])
-                        authorindex++;
+                        appendRow(authors[i]['name'],authors[i]['affiliation'],++authorindex,authors[i]['contribution'])
                     }
                 }
 
@@ -3113,7 +3114,7 @@ class Template:
                     remote: {
                              url : '%(site_url)s/submit/get_author_list?author=%%QUERY&%(params)s',
                              ajax: {
-                             beforeSend: function(){ $("#loading_gif").css('visibility','visible');},
+                             beforeSend: function(){ $("#loading_gif").css('visibility','visible');  },
                              complete: function(){ $("#loading_gif").css('visibility','hidden'); }
                              },
                              filter: function(parsedResponse) {
@@ -3169,7 +3170,7 @@ class Template:
                 displayKey: dispkey,
                 templates: {
                    suggestion: Handlebars.compile([
-                '<div {{#equal name "No Authors found"}} disabled="disabled" {{/equal}} id="autocomplete_element_{{position}}"><p class="author_autocomplete_email_field">{{email}}</p>',
+                '<div id="autocomplete_element_{{position}}"><p class="author_autocomplete_email_field">{{email}}</p>',
                 '<p class="author_autocomplete_name_field">{{lastname}} {{firstname}} {{name}}</p>',
                 '<p class="author_autocomplete_affiliation_field">{{affiliation}}</p></div>'
                 ].join(''))},

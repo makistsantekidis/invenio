@@ -312,242 +312,71 @@ class InvenioWebSubmitWebTest(InvenioWebTestCase):
 
     def test_autocompletion_authors(self):
 
+        from time import sleep
+        from random import randint,choice
+        from string import ascii_uppercase,digits
+        def random_string(N=None):
+            if N==None:
+                N=randint(10,25)
+            return ''.join(choice(ascii_uppercase + digits) for _ in range(N))
+        test_authors = 10
         self.browser.get(CFG_SITE_SECURE_URL)
         self.login(username="admin", password="")
         self.browser.get(CFG_SITE_SECURE_URL+'/submit?ln=en&doctype=DEMOTHE')
         self.find_element_by_xpath_with_timeout("//input[@value='Submit New Record']")
         self.browser.find_element_by_xpath("//input[@value='Submit New Record']").click()
+        self.find_element_by_name_with_timeout("DEMOTHE_TITLE")
+        self.fill_textbox(textbox_name='DEMOTHE_TITLE',text=random_string())
+        title = self.browser.find_element_by_name("DEMOTHE_TITLE")
+        self.find_element_by_id_with_timeout("author_textbox")
+        author_names = {}
+        for i in range(1,test_authors):
+            self.browser.find_element_by_id('author_textbox').send_keys('asa')
+            self.find_element_by_id_with_timeout('autocomplete_element_'+str(i))
+            self.browser.find_element_by_id('autocomplete_element_'+str(i)).click()
+            author_names[i] = self.browser.find_element_by_id('author_'+str(i)).text
+        self.fill_textbox(textbox_name="DEMOTHE_ABS", text=random_string())
+        abstract = self.browser.find_element_by_name("DEMOTHE_ABS").text
+        self.choose_selectbox_option_by_label('DEMOTHE_LANG',label='English')
+        self.fill_textbox(textbox_name='DEMOTHE_PUBL',text='CERN')
+        self.fill_textbox('DEMOTHE_PLDEF',text='Geneva')
+        self.choose_selectbox_option_by_label(selectbox_name='DEMOTHE_DIPL',label='MSc')
+        self.fill_textbox(textbox_name='DEMOTHE_DATE',text='11/11/1991')
+        self.fill_textbox(textbox_name='DEMOTHE_UNIV', text='AUTH')
+        self.fill_textbox(textbox_name='DEMOTHE_PLACE',text='Thessaloniki')
+        self.fill_textbox(textbox_name='DEMOTHE_FILE',text='/opt/invenio/lib/webtest/invenio/test.pdf')
+        author_contributions = {}
+        for i in range(2,test_authors,2):
+            self.browser.find_element_by_id('contribution_textfield_'+str(i)).send_keys(random_string())
+        for i in range(1,test_authors):
+            author_contributions[i] = self.browser.find_element_by_id('contribution_textfield_' + str(i)).get_attribute('value')
+        self.find_element_by_name_with_timeout("endS")
+        self.browser.find_element_by_name("endS").click()
+        self.find_element_by_xpath_with_timeout('html/body/div[2]/div[3]/form/center/table/tbody/tr[2]/td/small/b[2]')
+        doc_ref = self.browser.find_element_by_xpath('html/body/div[2]/div[3]/form/center/table/tbody/tr[2]/td/small/b[2]').text
+        self.browser.get(CFG_SITE_SECURE_URL+'/submit?ln=en&doctype=DEMOTHE')
+        self.find_element_by_xpath_with_timeout("//input[@value='Modify Record']")
+        self.browser.find_element_by_xpath("//input[@value='Modify Record']").click()
+        self.browser.find_element_by_name('DEMOTHE_RN').clear()
+        self.fill_textbox(textbox_name='DEMOTHE_RN',text=doc_ref)
+        self.choose_selectbox_option_by_label(selectbox_name="DEMOTHE_CHANGE[]",label="Title")
+        self.choose_selectbox_option_by_label(selectbox_name="DEMOTHE_CHANGE[]",label="Author(s)")
+        self.choose_selectbox_option_by_label(selectbox_name="DEMOTHE_CHANGE[]",label="Abstract")
+        sleep(5)
+        self.find_element_by_name_with_timeout("endS")
+        self.browser.find_element_by_name("endS").click()
+        for i in range(1,test_authors):
+            self.find_element_by_id_with_timeout('author_'+str(i))
+            self.assertEqual(self.browser.find_element_by_id('author_'+str(i)).text,author_names[i],\
+                    "Authors must stay the same")
+            print(self.browser.find_element_by_id('contribution_textfield_'+str(i)).text,author_contributions[i])
+            self.assertEqual(self.browser.find_element_by_id('contribution_textfield_'+str(i)).get_attribute('value'),author_contributions[i],\
+                    "Contributions should stay in the same authors")
+
+        sleep(10)
 
 
-        sel = self.selenium
-        sel.open("/?")
-        sel.click("link=Submit")
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=Demo Thesis Submission")
-        sel.wait_for_page_to_load("30000")
-        sel.click("css=input.adminbutton")
-        sel.wait_for_page_to_load("30000")
-        submission_no = sel.get_text("css=td > table > tbody > tr > td.submitHeader > small")
-        sel.type("name=DEMOTHE_TITLE", sel.get_eval("Math.floor(Math.random()*111111111111)"))
-        title = sel.get_value("name=DEMOTHE_TITLE")
-        sel.send_keys("id=author_textbox", "asa")
-        for i in range(60):
-            try:
-                if re.search(r"^[\s\S]*asa[\s\S]*$", sel.get_text("css=p.author_autocomplete_name_field")): break
-            except: pass
-            time.sleep(1)
-        else: self.fail("time out")
-        sel.click("xpath=(//p[contains(@class,'author_autocomplete_name_field')])[1]")
-        sel.send_keys("id=author_textbox", "asa")
-        for i in range(60):
-            try:
-                if re.search(r"^[\s\S]*asa[\s\S]*$", sel.get_text("css=p.author_autocomplete_name_field")): break
-            except: pass
-            time.sleep(1)
-        else: self.fail("time out")
-        sel.click("xpath=(//p[contains(@class,'author_autocomplete_name_field')])[2]")
-        sel.send_keys("id=author_textbox", "asa")
-        for i in range(60):
-            try:
-                if re.search(r"^[\s\S]*asa[\s\S]*$", sel.get_text("css=p.author_autocomplete_name_field")): break
-            except: pass
-            time.sleep(1)
-        else: self.fail("time out")
-        sel.click("xpath=(//p[contains(@class,'author_autocomplete_name_field')])[3]")
-        sel.send_keys("id=author_textbox", "asa")
-        for i in range(60):
-            try:
-                if re.search(r"^[\s\S]*asa[\s\S]*$", sel.get_text("css=p.author_autocomplete_name_field")): break
-            except: pass
-            time.sleep(1)
-        else: self.fail("time out")
-        sel.click("xpath=(//p[contains(@class,'author_autocomplete_name_field')])[4]")
-        sel.send_keys("id=author_textbox", "asa")
-        for i in range(60):
-            try:
-                if re.search(r"^[\s\S]*asa[\s\S]*$", sel.get_text("css=p.author_autocomplete_name_field")): break
-            except: pass
-            time.sleep(1)
-        else: self.fail("time out")
-        sel.click("xpath=(//p[contains(@class,'author_autocomplete_name_field')])[5]")
-        sel.send_keys("id=author_textbox", "asa")
-        for i in range(60):
-            try:
-                if re.search(r"^[\s\S]*asa[\s\S]*$", sel.get_text("css=p.author_autocomplete_name_field")): break
-            except: pass
-            time.sleep(1)
-        else: self.fail("time out")
-        sel.click("xpath=(//p[contains(@class,'author_autocomplete_name_field')])[6]")
-        sel.send_keys("id=author_textbox", "asa")
-        for i in range(60):
-            try:
-                if re.search(r"^[\s\S]*asa[\s\S]*$", sel.get_text("css=p.author_autocomplete_name_field")): break
-            except: pass
-            time.sleep(1)
-        else: self.fail("time out")
-        sel.click("xpath=(//p[contains(@class,'author_autocomplete_name_field')])[7]")
-        author_1 = sel.get_text("id=author_1")
-        author_2 = sel.get_text("id=author_2")
-        author_3 = sel.get_text("id=author_3")
-        author_4 = sel.get_text("id=author_4")
-        author_5 = sel.get_text("id=author_5")
-        author_6 = sel.get_text("id=author_6")
-        author_7 = sel.get_text("id=author_7")
-        sel.type("name=DEMOTHE_ABS", sel.get_eval("Math.floor(Math.random()*111111111111)"))
-        abstract = sel.get_value("name=DEMOTHE_ABS")
-        sel.select("name=DEMOTHE_LANG", "label=English")
-        sel.type("name=DEMOTHE_PUBL", "CERN")
-        sel.type("name=DEMOTHE_PLDEF", "Geneva")
-        sel.select("name=DEMOTHE_DIPL", "label=MSc")
-        sel.type("name=DEMOTHE_DATE", "11/11/1991")
-        sel.type("name=DEMOTHE_UNIV", "AUTH")
-        sel.type("name=DEMOTHE_PLACE", "Thessaloniki")
-        sel.type("name=DEMOTHE_FILE", "/home/mike/Downloads/SIPB.pdf")
-        sel.send_keys("id=contribution_textfield_1", sel.get_eval("Math.floor(Math.random()*111111111111)+\"\\\n\" + Math.floor(Math.random()*111111111111)"))
-        sel.send_keys("id=contribution_textfield_3", sel.get_eval("Math.floor(Math.random()*111111111111)+\"\\\n\" + Math.floor(Math.random()*111111111111)"))
-        sel.send_keys("id=contribution_textfield_5", sel.get_eval("Math.floor(Math.random()*111111111111)+\"\\\n\" + Math.floor(Math.random()*111111111111)"))
-        contribution_1 = sel.get_value("id=contribution_textfield_1")
-        contribution_3 = sel.get_value("id=contribution_textfield_3")
-        contribution_5 = sel.get_value("id=contribution_textfield_5")
-        sel.click("name=endS")
-        sel.wait_for_page_to_load("30000")
-        reference = sel.get_text("//b[2]")
-        sel.click("link=Submit")
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=Demo Thesis Submission")
-        sel.wait_for_page_to_load("30000")
-        sel.click("//input[@value='Modify Record']")
-        sel.wait_for_page_to_load("30000")
-        sel.type("name=DEMOTHE_RN", reference)
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Author(s)")
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Title")
-        time.sleep(4)
-        sel.click("name=endS")
-        sel.wait_for_page_to_load("30000")
-        try: self.assertEqual(title, sel.get_value("name=DEMOTHE_TITLE"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_1, sel.get_value("id=contribution_textfield_0"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual("", sel.get_value("id=contribution_textfield_1"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_3, sel.get_value("id=contribution_textfield_2"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual("", sel.get_value("id=contribution_textfield_3"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_5, sel.get_value("id=contribution_textfield_4"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual("", sel.get_value("id=contribution_textfield_5"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual("", sel.get_value("id=contribution_textfield_6"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(author_1, sel.get_text("id=author_0"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(author_2, sel.get_text("id=author_1"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(author_3, sel.get_text("id=author_2"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(author_4, sel.get_text("id=author_3"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(author_5, sel.get_text("id=author_4"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(author_6, sel.get_text("id=author_5"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(author_7, sel.get_text("id=author_6"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        sel.send_keys("id=contribution_textfield_0", sel.get_eval("Math.floor(Math.random()*111111111111)+\"\\\n\" + Math.floor(Math.random()*111111111111)"))
-        sel.send_keys("id=contribution_textfield_1", sel.get_eval("Math.floor(Math.random()*111111111111)+\"\\\n\" + Math.floor(Math.random()*111111111111)"))
-        sel.send_keys("id=contribution_textfield_2", sel.get_eval("Math.floor(Math.random()*111111111111)+\"\\\n\" + Math.floor(Math.random()*111111111111)"))
-        sel.send_keys("id=contribution_textfield_3", sel.get_eval("Math.floor(Math.random()*111111111111)+\"\\\n\" + Math.floor(Math.random()*111111111111)"))
-        sel.send_keys("id=contribution_textfield_4", sel.get_eval("Math.floor(Math.random()*111111111111)+\"\\\n\" + Math.floor(Math.random()*111111111111)"))
-        sel.send_keys("id=contribution_textfield_5", sel.get_eval("Math.floor(Math.random()*111111111111)+\"\\\n\" + Math.floor(Math.random()*111111111111)"))
-        sel.send_keys("name=DEMOTHE_TITLE", sel.get_eval("Math.floor(Math.random()*111111111111)"))
-        contribution_0 = sel.get_value("id=contribution_textfield_0")
-        contribution_1 = sel.get_value("id=contribution_textfield_1")
-        contribution_2 = sel.get_value("id=contribution_textfield_2")
-        contribution_3 = sel.get_value("id=contribution_textfield_3")
-        contribution_4 = sel.get_value("id=contribution_textfield_4")
-        contribution_5 = sel.get_value("id=contribution_textfield_5")
-        title = sel.get_value("name=DEMOTHE_TITLE")
-        sel.send_keys("id=author_textbox", "asa")
-        for i in range(60):
-            try:
-                if re.search(r"^[\s\S]*asa[\s\S]*$", sel.get_text("css=p.author_autocomplete_name_field")): break
-            except: pass
-            time.sleep(1)
-        else: self.fail("time out")
-        sel.click("xpath=(//p[contains(@class,'author_autocomplete_name_field')])[9]")
-        sel.send_keys("id=contribution_textfield_6", sel.get_eval("Math.floor(Math.random()*111111111111)+\"\\\n\" + Math.floor(Math.random()*111111111111)"))
-        contribution_6 = sel.get_value("id=contribution_textfield_6")
-        time.sleep(0.01)
-        sel.click("name=End")
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=Submit")
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=Demo Thesis Submission")
-        sel.wait_for_page_to_load("30000")
-        sel.click("//input[@value='Modify Record']")
-        sel.wait_for_page_to_load("30000")
-        sel.type("name=DEMOTHE_RN", reference)
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Other Report Numbers")
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Title")
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Subtitle")
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Author(s)")
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Supervisor(s)")
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Abstract")
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Number of Pages")
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Language")
-        time.sleep(4)
-        sel.click("name=endS")
-        sel.wait_for_page_to_load("30000")
-        try: self.assertEqual(title, sel.get_value("name=DEMOTHE_TITLE"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_0, sel.get_value("id=contribution_textfield_0"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_1, sel.get_value("id=contribution_textfield_1"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_2, sel.get_value("id=contribution_textfield_2"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_3, sel.get_value("id=contribution_textfield_3"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_4, sel.get_value("id=contribution_textfield_4"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_5, sel.get_value("id=contribution_textfield_5"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_6, sel.get_value("id=contribution_textfield_6"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual("", sel.get_value("id=contribution_textfield_7"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(abstract, sel.get_value("name=DEMOTHE_ABS"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        sel.click("//img[@onclick='delete_author(this,2)']")
-        sel.click("//img[@onclick='delete_author(this,3)']")
-        sel.click("//img[@onclick='delete_author(this,4)']")
-        sel.click("name=End")
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=Submit")
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=Demo Thesis Submission")
-        sel.wait_for_page_to_load("30000")
-        sel.click("//input[@value='Modify Record']")
-        sel.wait_for_page_to_load("30000")
-        sel.type("name=DEMOTHE_RN", reference)
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Author(s)")
-        sel.add_selection("name=DEMOTHE_CHANGE[]", "label=Title")
-        time.sleep(3)
-        sel.click("name=endS")
-        sel.wait_for_page_to_load("30000")
-        try: self.assertEqual(contribution_0, sel.get_value("id=contribution_textfield_0"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_1, sel.get_value("id=contribution_textfield_1"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_5, sel.get_value("id=contribution_textfield_2"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual(contribution_6, sel.get_value("id=contribution_textfield_3"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.assertEqual("", sel.get_value("id=contribution_textfield_4"))
-        except AssertionError, e: self.verificationErrors.append(str(e))
-
-TEST_SUITE = make_test_suite(InvenioWebSubmitWebTest, )
+TEST_SUITE = make_test_suite(InvenioWebSubmitWebTest,)
 
 if __name__ == '__main__':
     run_test_suite(TEST_SUITE, warn_user=True)
