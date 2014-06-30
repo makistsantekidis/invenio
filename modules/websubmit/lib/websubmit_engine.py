@@ -89,6 +89,8 @@ from invenio.websubmit_dblayer import \
      get_submissions_at_level_X_with_score_above_N, \
      submission_is_finished
 
+from invenio.bibfield_utils import retrieve_authorid_type,retrieve_authorid_id
+
 import invenio.template
 websubmit_templates = invenio.template.load('websubmit')
 
@@ -1912,38 +1914,22 @@ def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=Non
                 raise
     return (result,None)
 
+def convert_tag_tuple_array_to_author_dictionary(record_tag):
+    author = {}
+    for _tuple in record_tag:
+        if _tuple[0] == 'x':
+            if CFG_SUBFIELFD_TO_JSON_FIELDS['x'].get(retrieve_authorid_type(_tuple[1])):
+               author[CFG_SUBFIELFD_TO_JSON_FIELDS['x'].get(retrieve_authorid_type(_tuple[1]))] = retrieve_authorid_id(_tuple[1]).decode("string_escape")
+        else:
+            if CFG_SUBFIELFD_TO_JSON_FIELDS.get(_tuple[0]):
+                if (not _tuple[1] == " ") and _tuple[1]:
+                    author[CFG_SUBFIELFD_TO_JSON_FIELDS.get(_tuple[0])] = _tuple[1].decode("string_escape")
 
-
-def retrieve_authorid_type(id_string):
-    if not id_string or type(id_string) is not str:
-        return ""
-    if id_string.find("|(") != -1 and id_string.split("|(")[1].find(")") != -1:
-        return id_string.split("|(")[1].split(")")[0]
-    return "id"
-
-
-def retrieve_authorid_id(id_string):
-    if not id_string or type(id_string) is not str:
-        return ""
-    if id_string.find("|(") != -1 and id_string.split("|(")[1].find(")") != -1:
-        return id_string.split(")")[1]
-    return ""
+    return author
 
 def convert_record_authors_to_json(record_id):
     from invenio.search_engine import get_record
     record = get_record(record_id)
-    def convert_tag_tuple_array_to_author_dictionary(record_tag):
-        author = {}
-        for _tuple in record_tag:
-            if _tuple[0] == 'x':
-                if CFG_SUBFIELFD_TO_JSON_FIELDS['x'].get(retrieve_authorid_type(_tuple[1])):
-                   author[CFG_SUBFIELFD_TO_JSON_FIELDS['x'].get(retrieve_authorid_type(_tuple[1]))] = retrieve_authorid_id(_tuple[1]).decode("string_escape")
-            else:
-                if CFG_SUBFIELFD_TO_JSON_FIELDS.get(_tuple[0]):
-                    if (not _tuple[1] == " ") and _tuple[1]:
-                        author[CFG_SUBFIELFD_TO_JSON_FIELDS.get(_tuple[0])] = _tuple[1].decode("string_escape")
-
-        return author
     main_author = record.get('100')
     authors = []
 
@@ -1953,6 +1939,3 @@ def convert_record_authors_to_json(record_id):
         authors.append(convert_tag_tuple_array_to_author_dictionary(other_author[0]))
     from json import dumps
     return dumps({'items' : authors}).replace("\"","'")
-
-
-

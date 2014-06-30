@@ -443,3 +443,18 @@ class Validator(ValidatorBase):
             self._validate_required_fields()
 
         return len(self._errors) == 0
+
+
+def retrieve_authorid_type(id_string):
+    if not id_string or type(id_string) is not str:
+        return ""
+    if id_string.find("|(") != -1 and id_string.split("|(")[1].find(")") != -1:
+        return id_string.split("|(")[1].split(")")[0]
+    return "id"
+
+def retrieve_authorid_id(id_string):
+    if not id_string or type(id_string) is not str:
+        return ""
+    if id_string.find("|(") != -1 and id_string.split("|(")[1].find(")") != -1:
+        return id_string.split(")")[1]
+    return ""
