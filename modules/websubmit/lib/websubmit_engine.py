@@ -50,6 +50,7 @@ from invenio.webuser import getUid, get_email, collect_user_info, isGuestUser, \
                             page_not_authorized
 from invenio.websubmit_config import CFG_RESERVED_SUBMISSION_FILENAMES, \
                                      CFG_SUBFIELFD_TO_JSON_FIELDS, \
+                                     CFG_SUBFIELD_DEFINITIONS, \
     InvenioWebSubmitFunctionError, InvenioWebSubmitFunctionStop, \
     InvenioWebSubmitFunctionWarning
 from invenio.messages import gettext_set_language, wash_language
@@ -1917,9 +1918,9 @@ def get_authors_from_allowed_sources(req, author_string, indir=None, doctype=Non
 def convert_tag_tuple_array_to_author_dictionary(record_tag):
     author = {}
     for _tuple in record_tag:
-        if _tuple[0] == 'x':
-            if CFG_SUBFIELFD_TO_JSON_FIELDS['x'].get(retrieve_authorid_type(_tuple[1])):
-               author[CFG_SUBFIELFD_TO_JSON_FIELDS['x'].get(retrieve_authorid_type(_tuple[1]))] = retrieve_authorid_id(_tuple[1]).decode("string_escape")
+        if _tuple[0] == CFG_SUBFIELD_DEFINITIONS['id']:
+            if CFG_SUBFIELFD_TO_JSON_FIELDS[CFG_SUBFIELD_DEFINITIONS['id']].get(retrieve_authorid_type(_tuple[1])):
+               author[CFG_SUBFIELFD_TO_JSON_FIELDS[CFG_SUBFIELD_DEFINITIONS['id']].get(retrieve_authorid_type(_tuple[1]))] = retrieve_authorid_id(_tuple[1]).decode("string_escape")
         else:
             if CFG_SUBFIELFD_TO_JSON_FIELDS.get(_tuple[0]):
                 if (not _tuple[1] == " ") and _tuple[1]:
