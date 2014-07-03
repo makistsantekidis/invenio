@@ -55,8 +55,9 @@ CFG_RESERVED_SUBMISSION_FILENAMES = ['SuE',
 CFG_WEBSUBMIT_TMP_VIDEO_PREFIX = "video_upload_"
 
 
+CFG_SUBFIELD_DEFINITIONS = { "name" : "a", "id": "0", "contribution": "g", "affiliation": "u", "email": "m"}
 
-CFG_SUBFIELFD_TO_JSON_FIELDS = {"a":"name","x": {"id": "id", "SzGeCERN" : "cernccid", "INSPIRE": "inspireid"} ,"c":"contribution","u":"affiliation","m":"email"}
+CFG_SUBFIELFD_TO_JSON_FIELDS = { CFG_SUBFIELD_DEFINITIONS["name"]:"name",CFG_SUBFIELD_DEFINITIONS["id"] : {"id": "id", "SzGeCERN" : "cernccid", "INSPIRE": "inspireid"} ,CFG_SUBFIELD_DEFINITIONS["contribution"]:"contribution",CFG_SUBFIELD_DEFINITIONS["affiliation"]:"affiliation",CFG_SUBFIELD_DEFINITIONS["email"] :"email"}
 
 CFG_JSON_TO_TPL_FIELDS =  {"id": "AUTHOR_ID","inspireid":"AUTHOR_ID", "name": "DEMOTHE_AU", "firstname" : "DEMOTHE_AU", "lastname" : "DEMOTHE_AU", "cernccid" : "AUTHOR_ID" , "affiliation" : "AUTHOR_AFFILIATION", "email" : "AUTHOR_EMAIL", "contribution": "AUTHOR_CONTRIBUTION"}
 

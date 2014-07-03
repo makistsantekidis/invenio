@@ -20,13 +20,9 @@ __revision__ = "$Id$"
 import os
 import json
 from invenio.websubmit_functions.Shared_Functions import get_dictionary_from_string,ParamFromFile,write_file
-from invenio.websubmit_config import CFG_JSON_TO_TPL_FIELDS,CFG_AUTHORITY_CONTAINER_DICTIONARY,CFG_TPL_FIELDS
+from invenio.websubmit_config import CFG_SUBFIELD_DEFINITIONS,CFG_JSON_TO_TPL_FIELDS,CFG_AUTHORITY_CONTAINER_DICTIONARY,CFG_TPL_FIELDS
 
 def encapsulate_id(id_dict,key,value):
-    if (type(value) == list):
-        f = open('/tmp/qweasdzxc','w')
-        f.write(str(value))
-        f.close()
     if key in id_dict and str(value).strip():
         return id_dict[key]%value
     else:
@@ -41,10 +37,10 @@ def Convert_Field_from_Json(parameters, curdir, form, user_info=None):
     global sysno
 
     ## the name of the field that has the json inside
-    json_field = parameters.get("json_field",None)
+    json_field = parameters.get("authors_json_field",None)
 
     ## separators in case a field has more than one values
-    field_key_to_separator = { 'AUTHOR_ID' : '</subfield><subfield code="x">', 'DEMOTHE_AU' : ', '}
+    field_key_to_separator = { 'AUTHOR_ID' : '</subfield><subfield code="%s">' % CFG_SUBFIELD_DEFINITIONS['id'], 'DEMOTHE_AU' : ', '}
 
     filename = "%s/%s" % (curdir,json_field)
     if os.path.exists(filename):
