@@ -3050,8 +3050,8 @@ class Template:
                     var json = document.getElementById('json_authors_input').value.split("'").join("\\"")
                     var obj = JSON && JSON.parse(json) || $.parseJSON(json);
                     for (var i in obj['items']){
-                        authors[i] = obj['items'][i];
-                        appendRow(authors[i]['name'],authors[i]['affiliation'],++authorindex,authors[i]['contribution'])
+                        authors[++authorindex] = obj['items'][i];
+                        appendRow(authors[authorindex]['name'],authors[authorindex]['affiliation'],authorindex,authors[authorindex]['contribution'])
                     }
                 }
 
@@ -3151,15 +3151,6 @@ class Template:
                     importAuthorsFromInput();
 
                 }
-                Handlebars.registerHelper('equal', function(lvalue, rvalue, options) {
-                    if (arguments.length < 3)
-                        throw new Error("Handlebars Helper equal needs 2 parameters");
-                    if( lvalue!=rvalue ) {
-                        return options.inverse(this);
-                    } else {
-                        return options.fn(this);
-                    }
-                });
                 engine.initialize();
                 $('.typeahead').typeahead({
                     highlight: true,
