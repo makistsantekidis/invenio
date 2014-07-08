@@ -2942,10 +2942,13 @@ class Template:
                  <div id="websubmit_authors_table">
                 </div>
                 <input type="hidden" id="json_authors_input" name="%(name)s" value="%(value)s"/>
+                <script src="https://code.jquery.com/jquery-1.11.0.min.js"></script>
+                <script src="https://code.jquery.com/ui/1.11.0/jquery-ui.min.js"></script>
+
                 <script type="text/javascript" src="/js/handlebars.min.js"></script>
                 <script type="text/javascript" src="/js/typeahead.bundle.min.js"></script>
                 <script type="text/javascript" src="/js/json2.js"></script>
-                <script>
+                                <script>
                 var authors = {};
                 var authorindex = 0;
 
@@ -2972,10 +2975,10 @@ class Template:
                         delete authors[authorindex]['lastname'];
                     }
                     if (datum['firstname'] != undefined){
-                    appendRow(datum['lastname']+", "+datum['firstname'],datum['affiliation'],authorindex,"");
+                    appendRow(datum['lastname']+", "+datum['firstname'],datum['affiliation'],authorindex,"",datum);
                     }
                     else{
-                    appendRow(datum['name'],datum['affiliation'],authorindex,"");
+                    appendRow(datum['name'],datum['affiliation'],authorindex,"",datum);
                     }
 
 
@@ -2983,17 +2986,31 @@ class Template:
                     $('.typeahead').typeahead('val', '');
                 }
 
-                function appendRow(Name,affiliation,index,contribution) {
+                reserved_keys = ['name','surname','firstname']
+                function appendRow(Name,affiliation,index,contribution,datum) {
                     if (contribution == undefined)
                     { contribution = "" ;}
-                    newRow = "<div class='websubmit_authors_list' style='position:relative;'><table><tr>" +
-                        "<td id='author_"+index+"' style='width:100px;margin-right:20px;'>" + Name +  "</td>" +
-                        "<td style='margin-right:25px;margin-left:160px;margin-bottom:5px;' >" + affiliation + "</td>" +
+                    newRow = "<div id="+index+" class='websubmit_authors_list' style='position:relative;'><table>"
+
+
+                    newRow +="<table><tr>" +
+                        "<td id='author_"+index+"' style='width:200px;margin-right:20px;font-weight:bolder;font-size: 18px;'>" + Name +  "</td>" +
+                     //   "<td style='margin-right:25px;margin-left:160px;margin-bottom:1px;' >" + affiliation + "</td>" +
                         "<div style='position:absolute;top:5px;right:5px'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></div>" +
-                        "<tr/><tr></table><table>" +
+                        "<tr/></table><table>"
+
+                    for (var auth_attr in datum) {
+                    if ($.inArray(auth_attr,reserved_keys) == -1 && datum[auth_attr] != "")
+                    newRow += "<tr>" +
+                        "<td id='" + auth_attr +"_"+index+"' style='width:100px;margin-right:100px;'>" + auth_attr +  ":</td>" +
+                        "<td style='margin-right:25px;margin-left:160px;margin-bottom:1px;' >" + datum[auth_attr] + "</td>";
+                    }
+                    newRow += "</tr>" +
+                        "</table><table>" +
                         %(contribution)s
                         "<td style='display:none;clear: both;' id= 'entry_info'></div>" +
                         "</tr></table></div>";
+
                     $('#websubmit_authors_table').append(newRow);
 
                     exportAuthorsToTextarea();
@@ -3039,8 +3056,10 @@ class Template:
                 function exportAuthorsToTextarea(){
                     document.getElementById('json_authors_input').value = "";
                     var items_array = {"items":[]};
-                    for (var key in authors) {
-                        items_array["items"].push(authors[key])
+                    var keys = $("#websubmit_authors_table").sortable( "toArray" );
+                    for (var ind in keys) {
+                    console.log(authors[parseInt(keys[ind])])
+                        items_array["items"].push(authors[parseInt(keys[ind])])
                     }
                     document.getElementById('json_authors_input').value = JSON.stringify(items_array);
 
@@ -3051,7 +3070,7 @@ class Template:
                     var obj = JSON && JSON.parse(json) || $.parseJSON(json);
                     for (var i in obj['items']){
                         authors[++authorindex] = obj['items'][i];
-                        appendRow(authors[authorindex]['name'],authors[authorindex]['affiliation'],authorindex,authors[authorindex]['contribution'])
+                        appendRow(authors[authorindex]['name'],authors[authorindex]['affiliation'],authorindex,authors[authorindex]['contribution'],authors[authorindex])
                     }
                 }
 
@@ -3102,6 +3121,10 @@ class Template:
                     };
                   }
                 // END IE COMBATIBILITY
+                $( "#websubmit_authors_table" ).sortable();
+                $( "#websubmit_authors_table" ).sortable({
+                  update: function( event, ui ) { exportAuthorsToTextarea();}
+                  });
                 var no_authors_found_message = "No Authors found"
                 var positionCounter = 1;
                 Handlebars.registerHelper('position', function() {
@@ -3152,6 +3175,7 @@ class Template:
 
                 }
                 engine.initialize();
+
                 $('.typeahead').typeahead({
                     highlight: true,
                     hint: true,
