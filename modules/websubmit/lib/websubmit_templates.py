@@ -2984,6 +2984,8 @@ class Template:
 
                     }
                     $('.typeahead').typeahead('val', '');
+
+
                 }
 
                 reserved_keys = ['name','surname','firstname']
@@ -2993,7 +2995,13 @@ class Template:
                     newRow = "<div id="+index+" class='websubmit_authors_list' style='position:relative;'><table>"
 
 
-                    newRow +="<table><tr>" +
+                    if (index == $("#websubmit_authors_table").sortable( "toArray" )[0])
+                    {
+                        newRow += "<tr><td id='principal_author_notification' style='width:200px;margin-right:20px;font-weight:bolder;'>(Principal author)</td></tr>"
+                    }
+
+
+                    newRow +="<tr>" +
                         "<td id='author_"+index+"' style='width:200px;margin-right:20px;font-weight:bolder;font-size: 18px;'>" + Name +  "</td>" +
                      //   "<td style='margin-right:25px;margin-left:160px;margin-bottom:1px;' >" + affiliation + "</td>" +
                         "<div style='position:absolute;top:5px;right:5px'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></div>" +
@@ -3010,6 +3018,7 @@ class Template:
                         %(contribution)s
                         "<td style='display:none;clear: both;' id= 'entry_info'></div>" +
                         "</tr></table></div>";
+
 
                     $('#websubmit_authors_table').append(newRow);
 
@@ -3058,11 +3067,11 @@ class Template:
                     var items_array = {"items":[]};
                     var keys = $("#websubmit_authors_table").sortable( "toArray" );
                     for (var ind in keys) {
-                    console.log(authors[parseInt(keys[ind])])
                         items_array["items"].push(authors[parseInt(keys[ind])])
                     }
                     document.getElementById('json_authors_input').value = JSON.stringify(items_array);
-
+                    $('#principal_author_notification').remove()
+                    $($("#websubmit_authors_table").children()[0].children[1]).find('tbody').prepend("<tr><td id='principal_author_notification' style='width:200px;margin-right:20px;font-weight:bolder;'>(Principal author)</td></tr>")
                 }
 
                 function importAuthorsFromInput(){
