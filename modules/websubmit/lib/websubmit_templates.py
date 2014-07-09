@@ -3074,7 +3074,7 @@ class Template:
                     }
                     document.getElementById('json_authors_input').value = JSON.stringify(items_array);
                     $('#principal_author_notification').remove()
-                    $($("#websubmit_authors_table").children()[0].children[1]).find('tbody').prepend("<tr><td id='principal_author_notification' style='width:200px;margin-right:20px;font-weight:bolder;'>(Principal author)</td></tr>")
+                    $($("#websubmit_authors_table").children()[0].children[1]).find('tbody').prepend("<tr id='principal_author_notification'><td  style='width:200px;margin-right:20px;font-weight:bolder;'>(Principal author)</td></tr>")
                 }
 
                 function importAuthorsFromInput(){
@@ -3116,7 +3116,10 @@ class Template:
                                     })
                                  }
                                  else {
-                                    dataset = parsedResponse
+                                    for (key in parsedResponse){
+                                        if (!checkAuthorExistence(parsedResponse[key]))
+                                        dataset.push(parsedResponse[key])
+                                    }
                                  }
                                  return dataset;
                                },
