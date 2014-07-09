@@ -2916,7 +2916,14 @@ class Template:
                     datum['affiliation'] = author_textbox.split(':')[1].replace(' ','')
                     }"""
             custom_author_use_text = '''<br>To add custom Authors use the format: <i>Lastname, Firstname: Affiliation </i>'''
-            custom_author_submit_button = '''<button style="vertical-align:bottom; height:40px;" onclick="AppendAuthorToAuthorHiddenInput()">Add Author</button>'''
+            custom_author_submit_button = '''
+                                            <button id="select_author_button" style="vertical-align:bottom; height:40px;">Add Author</button>
+                                            <script>
+                                            $( "#select_author_button" ).click(function() {
+                                              AppendAuthorToAuthorHiddenInput()
+                                              });
+                                              </script>
+                                            '''
         else:
             custom_authors = """if (typeof datum === "undefined"){
             if (typeof document.getElementById('author_textbox').value === "undefined") return;
@@ -2997,6 +3004,7 @@ class Template:
                     { contribution = "" ;}
                     newRow = "<div id="+index+" class='websubmit_authors_list' style='position:relative;'><table>"
 
+                    num = $("#websubmit_authors_table").children().length+1
 
                     if (index == $("#websubmit_authors_table").sortable( "toArray" )[0])
                     {
@@ -3005,7 +3013,7 @@ class Template:
 
 
                     newRow +="<tr>" +
-                        "<td id='author_"+index+"' style='width:200px;margin-right:20px;font-weight:bolder;font-size: 18px;'>" + Name +  "</td>" +
+                        "<td id='author_"+index+"' style='width:200px;margin-right:20px;font-weight:bolder;font-size: 18px;'><div name='author_numbering' style=''>" +num + ". </div>" +  Name +  "</td>" +
                      //   "<td style='margin-right:25px;margin-left:160px;margin-bottom:1px;' >" + affiliation + "</td>" +
                         "<div style='position:absolute;top:5px;right:5px'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></div>" +
                         "<tr/></table><table>"
@@ -3073,6 +3081,12 @@ class Template:
                         items_array["items"].push(authors[keys[ind]])
                     }
                     document.getElementById('json_authors_input').value = JSON.stringify(items_array);
+
+                    numbering = 1
+                    $('[name="author_numbering"]').each(function(){
+                       $(this).text((numbering++) +"." );
+                       });
+
                     $('#principal_author_notification').remove()
                     $($("#websubmit_authors_table").children()[0].children[1]).find('tbody').prepend("<tr id='principal_author_notification'><td  style='width:200px;margin-right:20px;font-weight:bolder;'>(Principal author)</td></tr>")
                 }
