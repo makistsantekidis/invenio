@@ -2941,14 +2941,17 @@ class Template:
                  </div>
                  <div id="websubmit_authors_table">
                 </div>
+
                 <input type="hidden" id="json_authors_input" name="%(name)s" value="%(value)s"/>
+                <link rel="stylesheet" type="text/css" href="/img/demothe_typeahead.css">
                 <script src="https://code.jquery.com/jquery-1.11.0.min.js"></script>
                 <script src="https://code.jquery.com/ui/1.11.0/jquery-ui.min.js"></script>
 
                 <script type="text/javascript" src="/js/handlebars.min.js"></script>
                 <script type="text/javascript" src="/js/typeahead.bundle.min.js"></script>
                 <script type="text/javascript" src="/js/json2.js"></script>
-                                <script>
+                <script type="text/javascript" src="/js/es5-shim.min.js"></script>
+                <script>
                 var authors = {};
                 var authorindex = 0;
 
@@ -2966,8 +2969,8 @@ class Template:
                         $('.typeahead').typeahead('val', '');
                         return;
                     }
-
-                    authors[++authorindex] = $.extend({}, datum)
+                    authorindex = Math.random().toString(36).slice(2)
+                    authors[authorindex] = $.extend({}, datum)
                                        if ("firstname" in authors[authorindex])
                     {
                         authors[authorindex]['name'] = authors[authorindex]['lastname']+ ", "+authors[authorindex]['firstname']
@@ -3044,8 +3047,8 @@ class Template:
                 function checkAuthorExistence(datum){
                     var value_array = []
                     value_array.push(datum['affiliation'])
-                    if ('name' in datum) value_array.push(datum['name'])
-                    if ('firstname' in datum) value_array.push(datum['lastname']+", " + datum['firstname'])
+                    if ('name' in datum) value_array.push(datum['name']);
+                    if ('firstname' in datum) value_array.push(datum['lastname']+", " + datum['firstname']);
 
                     if (Object.keys(authors).length === 0){return false}
                     for (var key in authors) {
@@ -3067,7 +3070,7 @@ class Template:
                     var items_array = {"items":[]};
                     var keys = $("#websubmit_authors_table").sortable( "toArray" );
                     for (var ind in keys) {
-                        items_array["items"].push(authors[parseInt(keys[ind])])
+                        items_array["items"].push(authors[keys[ind]])
                     }
                     document.getElementById('json_authors_input').value = JSON.stringify(items_array);
                     $('#principal_author_notification').remove()
@@ -3078,58 +3081,13 @@ class Template:
                     var json = document.getElementById('json_authors_input').value.split("'").join("\\"")
                     var obj = JSON && JSON.parse(json) || $.parseJSON(json);
                     for (var i in obj['items']){
-                        authors[++authorindex] = obj['items'][i];
+                        authorindex = Math.random().toString(36).slice(2)
+                        authors[authorindex] = obj['items'][i];
                         appendRow(authors[authorindex]['name'],authors[authorindex]['affiliation'],authorindex,authors[authorindex]['contribution'],authors[authorindex])
                     }
                 }
 
-                // IE COMPATIBILITY
-                if (!Object.keys) {
-                    Object.keys = function(obj) {
-                        var keys = [],
-                            key;
 
-                        for (key in obj) {
-                            if (obj.hasOwnProperty(key)) {
-                                keys.push(key);
-                            }
-                        }
-
-                        return keys;
-                    };
-                }
-
-                if (!Array.prototype.indexOf) {
-                    Array.prototype.indexOf = function (searchElement, fromIndex) {
-                      if ( this === undefined || this === null ) {
-                        throw new TypeError( '"this" is null or not defined' );
-                      }
-
-                      var length = this.length >>> 0; // Hack to convert object.length to a UInt32
-
-                      fromIndex = +fromIndex || 0;
-
-                      if (Math.abs(fromIndex) === Infinity) {
-                        fromIndex = 0;
-                      }
-
-                      if (fromIndex < 0) {
-                        fromIndex += length;
-                        if (fromIndex < 0) {
-                          fromIndex = 0;
-                        }
-                      }
-
-                      for (;fromIndex < length; fromIndex++) {
-                        if (this[fromIndex] === searchElement) {
-                          return fromIndex;
-                        }
-                      }
-
-                      return -1;
-                    };
-                  }
-                // END IE COMBATIBILITY
                 $( "#websubmit_authors_table" ).sortable();
                 $( "#websubmit_authors_table" ).sortable({
                   update: function( event, ui ) { exportAuthorsToTextarea();}
