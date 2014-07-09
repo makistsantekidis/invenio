@@ -208,6 +208,7 @@ install-jquery-plugins:
 	rm -f jquery.bookmark.package-1.4.0.zip && \
 	wget https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.3.0/handlebars.min.js &&\
 	wget http://twitter.github.com/typeahead.js/releases/latest/typeahead.bundle.min.js && \
+	wget https://raw.githubusercontent.com/es-shims/es5-shim/master/es5-shim.min.js && \
 	mkdir -p ${prefix}/var/www/img && \
 	cd ${prefix}/var/www/img && \
 	wget -r -np -nH --cut-dirs=4 -A "png,css" -P jquery-ui/themes http://jquery-ui.googlecode.com/svn/tags/1.8.17/themes/base/ && \
