@@ -2916,7 +2916,14 @@ class Template:
                     datum['affiliation'] = author_textbox.split(':')[1].replace(' ','')
                     }"""
             custom_author_use_text = '''<br>To add custom Authors use the format: <i>Lastname, Firstname: Affiliation </i>'''
-            custom_author_submit_button = '''<button style="vertical-align:bottom; height:40px;" onclick="AppendAuthorToAuthorHiddenInput()">Add Author</button>'''
+            custom_author_submit_button = '''
+                                            <button id="select_author_button" style="vertical-align:bottom; height:40px;">Add Author</button>
+                                            <script>
+                                            $(document).ready(function(){
+                                            $( "#select_author_button" ).click(AppendAuthorToAuthorHiddenInput);
+                                            });
+                                            </script>
+                                            '''
         else:
             custom_authors = """if (typeof datum === "undefined"){
             if (typeof document.getElementById('author_textbox').value === "undefined") return;
@@ -3073,6 +3080,12 @@ class Template:
                         items_array["items"].push(authors[keys[ind]])
                     }
                     document.getElementById('json_authors_input').value = JSON.stringify(items_array);
+
+                    numbering = 1
+                    $('[name="author_numbering"]').each(function(){
+                       $(this).text((numbering++) +"." );
+                       });
+
                     $('#principal_author_notification').remove()
                     $($("#websubmit_authors_table").children()[0].children[1]).find('tbody').prepend("<tr id='principal_author_notification'><td  style='width:200px;margin-right:20px;font-weight:bolder;'>(Principal author)</td></tr>")
                 }
@@ -3094,6 +3107,14 @@ class Template:
                   });
                 var no_authors_found_message = "No Authors found"
                 var positionCounter = 1;
+                $(document).ready(function(){
+
+                    $( "#websubmit_authors_table" ).sortable();
+                    $( "#websubmit_authors_table" ).sortable({
+                      update: function( event, ui ) { exportAuthorsToTextarea();}
+                      });
+
+
                 Handlebars.registerHelper('position', function() {
                     return positionCounter++;
                 });
@@ -3164,6 +3185,8 @@ class Template:
                 $('#author_textbox').on('typeahead:selected', AppendAuthorToAuthorHiddenInput);
                 $('#author_textbox').on('typeahead:closed',null);
                 $("#author_textbox").css("background-color","rgba(255,255,255,255)");
+                });
+
                 </script>''' % {"name": element['name'], "params": params, "value" : element['value'], "custom_authors":custom_authors, "contribution": contribution, "site_url":CFG_SITE_URL, \
                         "custom_author_submit_button": custom_author_submit_button, "custom_author_use_text" : custom_author_use_text  }
 
