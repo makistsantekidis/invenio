@@ -3491,7 +3491,13 @@ div.bibcircbottom {
 }
 
 .webcomment_comment_box blockquote {
-	margin: 10px;
+  padding: 0px 10px 0px 10px;
+  margin: 0px 0px 0px 10px;
+  border-left: 2px solid #3366CC;
+}
+
+.webcomment_comment_body {
+  margin: 10px;
 }
 
 .webcomment_comment_options {
