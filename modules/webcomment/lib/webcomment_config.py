@@ -30,6 +30,24 @@ CFG_WEBCOMMENT_ACTION_CODE = {
     'REPORT_ABUSE': 'A'
 }
 
+CFG_WEBCOMMENT_BODY_FORMATS = {
+    "HTML"     : "HTML",
+    "TEXT"     : "TXT",
+    "MARKDOWN" : "MD",
+}
+
+CFG_WEBCOMMENT_OUTPUT_FORMATS = {
+    "HTML" : {
+        "WEB" : "WEB",
+        "EMAIL" : "HTML_EMAIL",
+        "CKEDITOR" : "CKEDITOR",
+    },
+    "TEXT" : {
+        "EMAIL"    : "TEXT_EMAIL",
+        "TEXTAREA" : "TEXTAREA",
+    },
+}
+
 # Exceptions: errors
 class InvenioWebCommentError(Exception):
     """A generic error for WebComment."""
