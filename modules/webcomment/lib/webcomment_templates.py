@@ -373,7 +373,8 @@ class Template:
         if attached_files is None:
             attached_files = []
         out = ''
-        final_body = email_quoted_txt2html(body)
+        final_body = body
+        #final_body = email_quoted_txt2html(body)
         title = nickname
         title += '<a name="C%s" id="C%s"></a>' % (com_id, com_id)
         links = ''
@@ -520,10 +521,16 @@ class Template:
         links = ''
         _body = ''
         if body != '':
-            _body = '''
+             _body = '''
       <blockquote>
 %s
-      </blockquote>''' % email_quoted_txt2html(body, linebreak_html='')
+      </blockquote>''' % body
+
+
+#            _body = '''
+#      <blockquote>
+#%s
+#      </blockquote>''' % email_quoted_txt2html(body, linebreak_html='')
 
         # Check if user is a comment moderator
         record_primary_collection = guess_primary_collection_of_a_record(recID)
@@ -2450,7 +2457,8 @@ class Template:
                 <div class="yourcommentsrecordgroup%(recid)sheader">&#149; ''' % {'recid': id_bibrec} + \
                        record_info_html + '</div><div style="padding-left: 20px;">'
             if selected_display_format_option != 'ro':
-                final_body = email_quoted_txt2html(body)
+                final_body = body
+                #final_body = email_quoted_txt2html(body)
                 title = '<a name="C%s" id="C%s"></a>' % (comid, comid)
                 if status == "dm":
                     final_body = '<div class="webcomment_deleted_comment_message">%s</div>' % _("Comment deleted by the moderator")

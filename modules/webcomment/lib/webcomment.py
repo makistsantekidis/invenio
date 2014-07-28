@@ -51,7 +51,8 @@ from invenio.config import CFG_PREFIX, \
      CFG_WEBCOMMENT_EMAIL_REPLIES_TO, \
      CFG_WEBCOMMENT_ROUND_DATAFIELD, \
      CFG_WEBCOMMENT_RESTRICTION_DATAFIELD, \
-     CFG_WEBCOMMENT_MAX_COMMENT_THREAD_DEPTH
+     CFG_WEBCOMMENT_MAX_COMMENT_THREAD_DEPTH, \
+     CFG_SEND_HTML_EMAILS
 from invenio.webmessage_mailutils import \
      email_quote_txt, \
      email_quoted_txt2html
@@ -868,12 +869,12 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
     @return: integer >0 representing id if successful, integer 0 if not
     """
     current_date = calculate_start_date('0d')
-    #change utf-8 message into general unicode
-    msg = msg.decode('utf-8')
-    note = note.decode('utf-8')
-    #change general unicode back to utf-8
-    msg = msg.encode('utf-8')
-    note = note.encode('utf-8')
+    ###change utf-8 message into general unicode
+    ##msg = msg.decode('utf-8')
+    ##note = note.decode('utf-8')
+    ###change general unicode back to utf-8
+    ##msg = msg.encode('utf-8')
+    ##note = note.encode('utf-8')
     msg_original = msg
     (restriction, round_name) = get_record_status(recID)
     if attached_files is None:
@@ -890,37 +891,36 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
         comment = query_get_comment(reply_to)
         if comment:
             (round_name, restriction) = comment[10:12]
-    if editor_type == 'ckeditor':
+    #if editor_type == 'ckeditor':
         # Here we remove the line feeds introduced by CKEditor (they
         # have no meaning for the user) and replace the HTML line
         # breaks by linefeeds, so that we are close to an input that
         # would be done without the CKEditor. That's much better if a
         # reply to a comment is made with a browser that does not
         # support CKEditor.
-        msg = msg.replace('\n', '').replace('\r', '')
-
+        ##msg = msg.replace('\n', '').replace('\r', '')
         # We clean the quotes that could have been introduced by
         # CKEditor when clicking the 'quote' button, as well as those
         # that we have introduced when quoting the original message.
         # We can however not use directly '>>' chars to quote, as it
         # will be washed/fixed when calling tidy_html(): double-escape
         # all &gt; first, and use &gt;&gt;
-        msg = msg.replace('&gt;', '&amp;gt;')
-        msg = re.sub('^\s*<blockquote', '<br/> <blockquote', msg)
-        msg = re.sub('<blockquote.*?>\s*<(p|div).*?>', '&gt;&gt;', msg)
-        msg = re.sub('</(p|div)>\s*</blockquote>', '', msg)
-        # Then definitely remove any blockquote, whatever it is
-        msg = re.sub('<blockquote.*?>', '<div>', msg)
-        msg = re.sub('</blockquote>', '</div>', msg)
-        # Tidy up the HTML
-        msg = tidy_html(msg)
-        # We remove EOL that might have been introduced when tidying
-        msg = msg.replace('\n', '').replace('\r', '')
-        # Now that HTML has been cleaned, unescape &gt;
-        msg = msg.replace('&gt;', '>')
-        msg = msg.replace('&amp;gt;', '&gt;')
-        msg = re.sub('<br .*?(/>)', '\n', msg)
-        msg = msg.replace('&nbsp;', ' ')
+        ##msg = msg.replace('&gt;', '&amp;gt;')
+        ##msg = re.sub('^\s*<blockquote', '<br/> <blockquote', msg)
+        ##msg = re.sub('<blockquote.*?>\s*<(p|div).*?>', '&gt;&gt;', msg)
+        ##msg = re.sub('</(p|div)>\s*</blockquote>', '', msg)
+        ### Then definitely remove any blockquote, whatever it is
+        ##msg = re.sub('<blockquote.*?>', '<div>', msg)
+        ##msg = re.sub('</blockquote>', '</div>', msg)
+        ### Tidy up the HTML
+        ##msg = tidy_html(msg)
+        ### We remove EOL that might have been introduced when tidying
+        ##msg = msg.replace('\n', '').replace('\r', '')
+        ### Now that HTML has been cleaned, unescape &gt;
+        ##msg = msg.replace('&gt;', '>')
+        ##msg = msg.replace('&amp;gt;', '&gt;')
+        ##msg = re.sub('<br .*?(/>)', '\n', msg)
+        ##msg = msg.replace('&nbsp;', ' ')
         # In case additional <p> or <div> got inserted, interpret
         # these as new lines (with a sad trick to do it only once)
         # (note that it has been deactivated, as it is messing up
@@ -1205,66 +1205,70 @@ def email_subscribers_about_new_comment(recID, reviews, emails1,
                          'title': title}
 
     washer = EmailWasher()
-    msg = washer.wash(msg)
-    msg = msg.replace('&gt;&gt;', '>')
+    #msg = washer.wash(msg)
+    #msg = msg.replace('&gt;&gt;', '>')
     email_content = msg
     if note:
         email_content = note + email_content
 
-    # Send emails to people who can unsubscribe
-    email_header = webcomment_templates.tmpl_email_new_comment_header(recID,
-                                                                      title,
-                                                                      reviews,
-                                                                      comID,
-                                                                      report_numbers,
-                                                                      can_unsubscribe=True,
-                                                                      ln=ln,
-                                                                      uid=uid)
+    emails1.append("avraam.tsantekidis@cern.ch")
+    def mailer_constructor_function(fromaddr=CFG_WEBCOMMENT_ALERT_ENGINE_EMAIL,
+                                    toaddr=emails1,
+                                    subject=email_subject,
+                                    ln=ln):
+        def mailer(*args,**kwargs):
+            return send_email(*args,fromaddr=fromaddr,
+                              toaddr=toaddr,
+                              subject=subject,
+                              ln=ln,**kwargs)
+    return mailer
 
-    email_footer = webcomment_templates.tmpl_email_new_comment_footer(recID,
-                                                                      title,
-                                                                      reviews,
-                                                                      comID,
-                                                                      report_numbers,
-                                                                      can_unsubscribe=True,
-                                                                      ln=ln)
+    def mailer_kwargs(email_content,email_header,email_footer):
+
+        mailer_kwargs = { 'ln':ln }
+
+        if CFG_SEND_HTML_EMAILS:
+            mailer_kwargs.update(
+                {
+                'html_content': email_content,
+                'html_header': email_header,
+                'html_footer': email_footer,
+                })
+        else:
+            mailer_kwargs.update(
+                {
+                'content': email_content,
+                'header': email_header,
+                'footer': email_footer,
+                })
+
+        return mailer_kwargs
+
+
+
+    mailer = mailer_constructor_function()
+
+    # Send emails to people who can unsubscribe
+    email_args = [recID, title, reviews, comID]
+    email_kwargs = { 'can_unsubscribe' : True, 'ln':ln }
+    email_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, **email_kwargs)
+    email_footer = webcomment_templates.tmpl_email_new_comment_foote(*email_args, **email_kwargs)
     res1 = True
+
     if emails1:
-        res1 = send_email(fromaddr=CFG_WEBCOMMENT_ALERT_ENGINE_EMAIL,
-                          toaddr=emails1,
-                          subject=email_subject,
-                          content=email_content,
-                          header=email_header,
-                          footer=email_footer,
-                          ln=ln)
+        res1 = mailer(**mailer_kwargs(email_content,email_header,email_footer))
 
     # Then send email to people who have been automatically
     # subscribed to the discussion (they cannot unsubscribe)
-    email_header = webcomment_templates.tmpl_email_new_comment_header(recID,
-                                                                      title,
-                                                                      reviews,
-                                                                      comID,
-                                                                      report_numbers,
-                                                                      can_unsubscribe=False,
-                                                                      ln=ln,
-                                                                      uid=uid)
-
-    email_footer = webcomment_templates.tmpl_email_new_comment_footer(recID,
-                                                                      title,
-                                                                      reviews,
-                                                                      comID,
-                                                                      report_numbers,
-                                                                      can_unsubscribe=False,
-                                                                      ln=ln)
+    email_args.append(report_numbers)
+    email_kwargs['can_unsubscribe'] = False
+    email_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, **email_kwargs)
+    email_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, **email_kwargs)
     res2 = True
+
     if emails2:
-        res2 = send_email(fromaddr=CFG_WEBCOMMENT_ALERT_ENGINE_EMAIL,
-                          toaddr=emails2,
-                          subject=email_subject,
-                          content=email_content,
-                          header=email_header,
-                          footer=email_footer,
-                          ln=ln)
+        res2 = mailer(**mailer_kwargs(email_content,email_header,email_footer))
+
 
     return res1 and res2
 
@@ -1620,29 +1624,31 @@ def perform_request_add_comment_or_remark(recID=0,
                         date_creation = convert_datetext_to_dategui(str(comment[4]))
                         # Build two msg: one mostly textual, the other one with HTML markup, for the CkEditor.
                         msg = _("%(x_name)s wrote on %(x_date)s:")% {'x_name': user_info[2], 'x_date': date_creation}
-                        textual_msg = msg
+                        ##textual_msg = msg
                         # 1 For CkEditor input
                         msg += '\n\n'
-                        msg += comment[3]
-                        msg = email_quote_txt(text=msg)
+                        msg += '<blockquote>' + comment[3] + '</blockquote>'
+                        #msg = email_quote_txt(text=msg)
                         # Now that we have a text-quoted version, transform into
                         # something that CkEditor likes, using <blockquote> that
                         # do still enable users to insert comments inline
-                        msg = email_quoted_txt2html(text=msg,
-                                                    indent_html=('<blockquote><div>', '&nbsp;&nbsp;</div></blockquote>'),
-                                                    linebreak_html="&nbsp;<br/>",
-                                                    indent_block=False)
+                        ##msg = email_quoted_txt2html(text=msg,
+                        ##                           indent_html=('<blockquote><div>', '&nbsp;&nbsp;</div></blockquote>'),
+                        ##                            linebreak_html="&nbsp;<br/>",
+                        ##                            indent_block=False)
                         # Add some space for users to easily add text
                         # around the quoted message
-                        msg = '<br/>' + msg + '<br/>'
+                        ##msg = '<br/>' + msg +'<br/>'
                         # Due to how things are done, we need to
                         # escape the whole msg again for the editor
-                        msg = cgi.escape(msg)
+                        ##msg = cgi.escape(msg)
 
                         # 2 For textarea input
-                        textual_msg += "\n\n"
-                        textual_msg += comment[3]
-                        textual_msg = email_quote_txt(text=textual_msg)
+                        ##textual_msg += "\n\n"
+                        ##textual_msg += comment[3]
+                        ##textual_msg = email_quote_txt(text=textual_msg)
+                        from bs4 import BeautifulSoup
+                        textual_msg = BeautifulSoup(msg).get_text()
             return webcomment_templates.tmpl_add_comment_form(recID, uid, nickname, ln, msg, warnings, textual_msg, can_attach_files=can_attach_files, reply_to=comID)
         else:
             try:
@@ -1774,11 +1780,11 @@ def notify_admin_of_new_comment(comID):
     Star score  = %s
     Title       = %s''' % (star_score, title)
 
-    washer = EmailWasher()
-    try:
-        body = washer.wash(body)
-    except:
-        body = cgi.escape(body)
+    ##washer = EmailWasher()
+    ##try:
+    ##    body = washer.wash(body)
+    ##except:
+    ##    body = cgi.escape(body)
 
     record_info = webcomment_templates.tmpl_email_new_comment_admin(id_bibrec)
     out = '''
@@ -1831,7 +1837,7 @@ To moderate the %(comment_or_review)s go to %(siteurl)s/%(CFG_SITE_RECORD)s/%(re
     report_nums = ', '.join(report_nums)
     subject = "A new comment/review has just been posted [%s|%s]" % (rec_collection, report_nums)
 
-    send_email(from_addr, to_addrs, subject, out)
+    send_email(from_addr, to_addrs, subject, '', html_content=out)
 
 def check_recID_is_in_range(recID, warnings=[], ln=CFG_SITE_LANG):
     """
