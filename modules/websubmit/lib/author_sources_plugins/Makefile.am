@@ -18,8 +18,6 @@
 pylibdir = $(libdir)/python/invenio/websubmit_author_sources_plugins
 
 pylib_DATA = __init__.py \
-	     atlas_glance.py \
-	     ldap.py \
 	     bibauthority.py
 
 EXTRA_DIST = $(pylib_DATA)
