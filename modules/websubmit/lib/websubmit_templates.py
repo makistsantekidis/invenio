@@ -2909,11 +2909,11 @@ class Template:
         if allow_custom_authors:
             custom_authors = """if (typeof datum === "undefined"){
                     if (typeof document.getElementById('author_textbox').value === "undefined") return;
-                    datum = {};
-                    author_textbox = document.getElementById('author_textbox').value
-                    datum['lastname'] = author_textbox.split(',')[0]
-                    datum['firstname'] = author_textbox.split(',')[1].split(':')[0].replace(' ','')
-                    datum['affiliation'] = author_textbox.split(':')[1].replace(' ','')
+                        datum = {};
+                        author_textbox = document.getElementById('author_textbox').value;
+                        datum['lastname'] = author_textbox.split(',')[0]
+                        datum['firstname'] = author_textbox.split(',')[1].split(':')[0].replace(' ','')
+                        datum['affiliation'] = author_textbox.split(':')[1].replace(' ','')
                     }"""
             custom_author_use_text = '''<br>To add custom Authors use the format: <i>Lastname, Firstname: Affiliation </i>'''
             custom_author_submit_button = '''
@@ -2946,249 +2946,226 @@ class Template:
                  %(custom_author_submit_button)s
                  <img id="loading_gif" style="height:35px;width:35px;vertical-align:bottom;visibility: hidden;" src="/img/loading.gif">
                  </div>
-                 <div id="websubmit_authors_table">
-                </div>
+                 <div id="websubmit_authors_table"></div>
 
                 <input type="hidden" id="json_authors_input" name="%(name)s" value="%(value)s"/>
-                <link rel="stylesheet" type="text/css" href="/img/demothe_typeahead.css">
+                <link rel="stylesheet" type="text/css" href="%(site_url)s/img/demothe_typeahead.css">
                 <script src="https://code.jquery.com/jquery-1.11.0.min.js"></script>
                 <script src="https://code.jquery.com/ui/1.11.0/jquery-ui.min.js"></script>
 
-                <script type="text/javascript" src="/js/handlebars.min.js"></script>
-                <script type="text/javascript" src="/js/typeahead.bundle.min.js"></script>
-                <script type="text/javascript" src="/js/json2.js"></script>
-                <script type="text/javascript" src="/js/es5-shim.min.js"></script>
-                <script>
-                var authors = {};
-                var authorindex = 0;
+                <script type="text/javascript" src="%(site_url)s/js/handlebars.min.js"></script>
+                <script type="text/javascript" src="%(site_url)s/js/typeahead.bundle.min.js"></script>
+                <script type="text/javascript" src="%(site_url)s/js/json2.js"></script>
+                <script type="text/javascript" src="%(site_url)s/js/es5-shim.min.js"></script>
+                <script id="author-row-template" type="text/x-handlebars-template">
+                    <div id="{{index}}" class="author-row websubmit_author_list">
+                        <div class="author-row-header">
+                            <div class="author-row-header-name">{{name}} <span class="author-row-header-principal"></span></div>
+                            <div class="author-row-header-delete">
+                                <a href="javascript:void(0)" class="author-row-header-delete-button" data-index="{{index}}">
+                                    <img src='img/wb-delete-item.png' />
+                                </a>
+                            </div>
+                        </div>
+                        <div class="author-row-body">
+                            <div class="author-row-body-email">{{email}}</div>
+                            <div class="author-row-body-affiliation">{{affiliation}}</div>
+                        </div>
+                        <div class="author-row-footer"></div>
+                    </div>
+                </script>
+                <script id="author-row-template-autocomplete" type="text/x-handlebars-template">
+                    <div id="autocomplete_element_{{position}}" class="autocomplete-author-row">
+                        <div class="autocomplete-author-row-name">{{lastname}} {{firstname}} {{name}}</div>
+                        <div class="autocomplete-author-row-email">{{email}}</div>
+                        <div class="autocomplete-author-row-affiliation">{{affiliation}}</div>
+                    </div>
+                </script>
+                <script type="text/javascript">
+                    var authors = {};
+                    var authorindex = 0;
+                    var reserved_keys = ['name','surname','firstname'];
+                    // Compile the template, readmore  handlebarsjs.com
+                    var $AUTHORS_ROW_TEMPLATE = Handlebars.compile($('#author-row-template').html());
+                    var $AUTHORS_AUTOCOMPLETE_ROW_TEMPLATE = Handlebars.compile($('#author-row-template-autocomplete').html())
 
-                function format_author_entry(firstname,lastname,affiliation){
-                return lastname + ", " + firstname + ": " + affiliation;
-                }
-
-
-                function AppendAuthorToAuthorHiddenInput(object,datum){
-                    %(custom_authors)s
-                    if (!checkAuthorExistence(datum))
-                    {
-                    if (datum['name'] == no_authors_found_message)
-                    {
-                        $('.typeahead').typeahead('val', '');
-                        return;
-                    }
-                    authorindex = Math.random().toString(36).slice(2)
-                    authors[authorindex] = $.extend({}, datum)
-                                       if ("firstname" in authors[authorindex])
-                    {
-                        authors[authorindex]['name'] = authors[authorindex]['lastname']+ ", "+authors[authorindex]['firstname']
-                        delete authors[authorindex]['firstname'];
-                        delete authors[authorindex]['lastname'];
-                    }
-                    if (datum['firstname'] != undefined){
-                    appendRow(datum['lastname']+", "+datum['firstname'],datum['affiliation'],authorindex,"",datum);
-                    }
-                    else{
-                    appendRow(datum['name'],datum['affiliation'],authorindex,"",datum);
-                    }
-
-
-                    }
-                    $('.typeahead').typeahead('val', '');
-
-
-                }
-
-                reserved_keys = ['name','surname','firstname']
-                function appendRow(Name,affiliation,index,contribution,datum) {
-                    if (contribution == undefined)
-                    { contribution = "" ;}
-                    newRow = "<div id="+index+" class='websubmit_authors_list' style='position:relative;'><table>"
-
-
-                    if (index == $("#websubmit_authors_table").sortable( "toArray" )[0])
-                    {
-                        newRow += "<tr><td id='principal_author_notification' style='width:200px;margin-right:20px;font-weight:bolder;'>(Principal author)</td></tr>"
+                    function format_author_entry(firstname,lastname,affiliation){
+                        return lastname + ", " + firstname + ": " + affiliation;
                     }
 
-
-                    newRow +="<tr>" +
-                        "<td id='author_"+index+"' style='width:200px;margin-right:20px;font-weight:bolder;font-size: 18px;'>" + Name +  "</td>" +
-                     //   "<td style='margin-right:25px;margin-left:160px;margin-bottom:1px;' >" + affiliation + "</td>" +
-                        "<div style='position:absolute;top:5px;right:5px'><img src='img/wb-delete-item.png' onClick="+'"delete_author(this,'+index+')"'+"/></div>" +
-                        "<tr/></table><table>"
-
-                    for (var auth_attr in datum) {
-                    if ($.inArray(auth_attr,reserved_keys) == -1 && datum[auth_attr] != "")
-                    newRow += "<tr>" +
-                        "<td id='" + auth_attr +"_"+index+"' style='width:100px;margin-right:100px;'>" + auth_attr +  ":</td>" +
-                        "<td style='margin-right:25px;margin-left:160px;margin-bottom:1px;' >" + datum[auth_attr] + "</td>";
-                    }
-                    newRow += "</tr>" +
-                        "</table><table>" +
-                        %(contribution)s
-                        "<td style='display:none;clear: both;' id= 'entry_info'></div>" +
-                        "</tr></table></div>";
-
-
-                    $('#websubmit_authors_table').append(newRow);
-
-                    exportAuthorsToTextarea();
-                    positionCounter=1;
-                }
-
-
-                function add_author_extra_field(e,index,fieldname)
-                {
-                    authors[index][fieldname] = e.value;
-                    exportAuthorsToTextarea();
-                }
-
-                function delete_author(e,index)
-                {
-                       e.parentNode.parentNode.parentNode.removeChild(e.parentNode.parentNode);
-                       delete authors[index]
-                       $('#author_textbox').val("");
-                       exportAuthorsToTextarea();
-                }
-
-                function checkAuthorExistence(datum){
-                    var value_array = []
-                    value_array.push(datum['affiliation'])
-                    if ('name' in datum) value_array.push(datum['name']);
-                    if ('firstname' in datum) value_array.push(datum['lastname']+", " + datum['firstname']);
-
-                    if (Object.keys(authors).length === 0){return false}
-                    for (var key in authors) {
-                        if (value_array.indexOf(authors[key]['name'])!= -1 &&
-                             value_array.indexOf(authors[key]['affiliation'])!=-1)
-                            {
-                                return true
+                    function AppendAuthorToAuthorHiddenInput(object,datum){
+                        %(custom_authors)s
+                        if (!checkAuthorExistence(datum)){
+                            authorindex = Math.random().toString(36).slice(2)
+                            authors[authorindex] = $.extend({}, datum)
+                            if ("firstname" in authors[authorindex]){
+                                authors[authorindex]['name'] = authors[authorindex]['lastname']+ ", "+authors[authorindex]['firstname']
+                                delete authors[authorindex]['firstname'];
+                                delete authors[authorindex]['lastname'];
                             }
+                            // create dictionary ready to be rendered
+                            appendRow({
+                                'name': (datum['firstname'] === undefined) ? datum['name'] : datum['lastname'] + ', ' + datum['firstname'],
+                                'affiliation': datum['affiliation'],
+                                'index': authorindex,
+                                'email': (datum['email'] !== undefined) ? datum['email'] : ''
+                            });
+                        }
+                        $('.typeahead').typeahead('val', '');
                     }
-                    return false
-                }
 
-                function dispkey(suggestion_object){
-                return suggestion_object["lastname"] + ", " + suggestion_object["firstname"] + ": " + suggestion_object["affiliation"] ;
-                }
-
-                function exportAuthorsToTextarea(){
-                    document.getElementById('json_authors_input').value = "";
-                    var items_array = {"items":[]};
-                    var keys = $("#websubmit_authors_table").sortable( "toArray" );
-                    for (var ind in keys) {
-                        items_array["items"].push(authors[keys[ind]])
+                    function appendRow(author) {
+                        // apend the author's compiled template
+                        $('#websubmit_authors_table').append($AUTHORS_ROW_TEMPLATE(author));
+                        exportAuthorsToTextarea();
                     }
-                    document.getElementById('json_authors_input').value = JSON.stringify(items_array);
 
-                    numbering = 1
-                    $('[name="author_numbering"]').each(function(){
-                       $(this).text((numbering++) +"." );
-                       });
-
-                    $('#principal_author_notification').remove()
-                    $($("#websubmit_authors_table").children()[0].children[1]).find('tbody').prepend("<tr id='principal_author_notification'><td  style='width:200px;margin-right:20px;font-weight:bolder;'>(Principal author)</td></tr>")
-                }
-
-                function importAuthorsFromInput(){
-                    var json = document.getElementById('json_authors_input').value.split("'").join("\\"")
-                    var obj = JSON && JSON.parse(json) || $.parseJSON(json);
-                    for (var i in obj['items']){
-                        authorindex = Math.random().toString(36).slice(2)
-                        authors[authorindex] = obj['items'][i];
-                        appendRow(authors[authorindex]['name'],authors[authorindex]['affiliation'],authorindex,authors[authorindex]['contribution'],authors[authorindex])
+                    function add_author_extra_field(e, index, fieldname){
+                        authors[index][fieldname] = e.value;
+                        exportAuthorsToTextarea();
                     }
-                }
 
+                    function delete_the_author(){
+                        var $that = $(this)
+                          , index = $that.data('index');
+                        $('#'+index).remove();
+                        delete authors[index];
+                        $('#author_textbox').val("");
+                        exportAuthorsToTextarea();
+                    }
 
-                $( "#websubmit_authors_table" ).sortable();
-                $( "#websubmit_authors_table" ).sortable({
-                  update: function( event, ui ) { exportAuthorsToTextarea();}
-                  });
-                var no_authors_found_message = "No Authors found"
-                var positionCounter = 1;
-                $(document).ready(function(){
+                    function checkAuthorExistence(datum){
+                        var value_array = []
+                        value_array.push(datum['affiliation'])
+                        if ('name' in datum) value_array.push(datum['name']);
+                        if ('firstname' in datum) value_array.push(datum['lastname']+", " + datum['firstname']);
 
-                    $( "#websubmit_authors_table" ).sortable();
-                    $( "#websubmit_authors_table" ).sortable({
-                      update: function( event, ui ) { exportAuthorsToTextarea();}
-                      });
+                        if (Object.keys(authors).length === 0){return false}
+                        for (var key in authors) {
+                            if (value_array.indexOf(authors[key]['name'])!= -1 &&
+                                value_array.indexOf(authors[key]['affiliation'])!=-1){
+                                    return true;
+                                }
+                        }
+                        return false;
+                    }
 
+                    function dispkey(suggestion_object){
+                        return suggestion_object["lastname"] + ", " + suggestion_object["firstname"] + ": " + suggestion_object["affiliation"] ;
+                    }
 
-                Handlebars.registerHelper('position', function() {
-                    return positionCounter++;
-                });
-                var engine = new Bloodhound({
-                    name: 'authors',
-                    limit: 40,
-                    local: [],
-                    remote: {
-                             url : '%(site_url)s/submit/get_author_list?author=%%QUERY&%(params)s',
-                             ajax: {
-                             beforeSend: function(){ $("#loading_gif").css('visibility','visible');  },
-                             complete: function(){ $("#loading_gif").css('visibility','hidden'); }
-                             },
-                             filter: function(parsedResponse) {
-                                 var dataset = [];
-                                 if (parsedResponse.length == 0) {
-                                    dataset.push({
-                                    'name' : no_authors_found_message,
-                                    'affiliation' : 'The query did not return any authors from the current sources'
-                                    })
-                                 }
-                                 else {
-                                    for (key in parsedResponse){
-                                        if (!checkAuthorExistence(parsedResponse[key]))
-                                        dataset.push(parsedResponse[key])
-                                    }
-                                 }
-                                 return dataset;
-                               },
-                             rateLimitWait : 500
+                    function exportAuthorsToTextarea(){
+                        document.getElementById('json_authors_input').value = "";
+                        var items_array = {"items":[]};
+                        var keys = $("#websubmit_authors_table").sortable( "toArray" );
+                        // reset all principal authors
+                        $('.author-row-header-principal').empty();
+                        $('.author-row').removeClass('author-principal');
+                        //Add only to frist one
+                        if(keys[0] !== undefined){
+                            $('#'+keys[0]).find('.author-row-header-principal').html('<span class="label">Principal author</span>');
+                            $('#'+keys[0]).addClass('author-principal')
+                        }
+                        for (var ind in keys) {
+                            items_array["items"].push(authors[keys[ind]])
+                        }
+                        document.getElementById('json_authors_input').value = JSON.stringify(items_array);
+
+                        numbering = 1
+                        $('[name="author_numbering"]').each(function(){
+                            $(this).text((numbering++) +"." );
+                        });
+                    }
+
+                    function importAuthorsFromInput(){
+                        var json = document.getElementById('json_authors_input').value.split("'").join("\\"")
+                        var obj = JSON && JSON.parse(json) || $.parseJSON(json);
+                        for (var i in obj['items']){
+                            authorindex = Math.random().toString(36).slice(2)
+                            authors[authorindex] = obj['items'][i];
+                            appendRow({
+                                'name': (authors[authorindex]['firstname'] === undefined) ? authors[authorindex]['name'] : authors[authorindex]['lastname'] + ', '+daatum['firstname'],
+                                'affiliation': authors[authorindex]['affiliation'],
+                                'index': authorindex,
+                                'email': (authors[authorindex]['email'] !== undefined) ? authors[authorindex]['email'] : ''
+                            });
+                        }
+                    }
+
+                    var positionCounter = 1;
+                    $(document).ready(function(){
+                        $( "#websubmit_authors_table" ).sortable();
+                        $( "#websubmit_authors_table" ).sortable({
+                        update: function( event, ui ) {
+                            exportAuthorsToTextarea();
+                        }
+                        });
+                        // Bind the event to delete author
+                        $('body').on('click', '.author-row-header-delete-button', delete_the_author);
+                        Handlebars.registerHelper('position', function() {
+                            return positionCounter++;
+                        });
+                        var engine = new Bloodhound({
+                            name: 'authors',
+                            limit: 40,
+                            local: [],
+                            remote: {
+                                    url : '%(site_url)s/submit/get_author_list?author=%%QUERY&%(params)s',
+                                    ajax: {
+                                    beforeSend: function(){ $("#loading_gif").css('visibility','visible');  },
+                                    complete: function(){ $("#loading_gif").css('visibility','hidden'); }
+                                    },
+                                    filter: function(parsedResponse) {
+                                        var dataset = [];
+                                        for (key in parsedResponse){
+                                            if (!checkAuthorExistence(parsedResponse[key]))
+                                            dataset.push(parsedResponse[key])
+                                        }
+                                        return dataset;
+                                    },
+                                    rateLimitWait : 500
+                                    },
+                            datumTokenizer: function(d) {
+                                tokens = []
+                                tokens.push(Bloodhound.tokenizers.whitespace(d['lastname']));
+                                tokens.push(Bloodhound.tokenizers.whitespace(d['firstname']));
+                                tokens.push(d['affiliation'])
+                                tokens.push(d['email'])
+                                return tokens;
                             },
-                    datumTokenizer: function(d) {
-                        tokens = []
-                        tokens.push(Bloodhound.tokenizers.whitespace(d['lastname']));
-                        tokens.push(Bloodhound.tokenizers.whitespace(d['firstname']));
-                        tokens.push(d['affiliation'])
-                        tokens.push(d['email'])
-                        return tokens;
-                    },
-                    queryTokenizer: function (s){
-                        return s.split(/[, :]+/);
-                    }
+                            queryTokenizer: function (s){
+                                return s.split(/[, :]+/);
+                            }
+                        });
+
+                        if (document.getElementById('json_authors_input').value != "" && document.getElementById('json_authors_input').value != "None"){
+                            importAuthorsFromInput();
+                        }
+                        engine.initialize();
+
+                        $('.typeahead').typeahead({
+                                highlight: true,
+                                hint: true,
+                                minLength: 3
+                            },{
+                                displayKey: dispkey,
+                                templates: {
+                                    suggestion: $AUTHORS_AUTOCOMPLETE_ROW_TEMPLATE,
+                                    empty: [
+                                        '<div class="author-empty-message">',
+                                        '<h2>No authors found</h2>',
+                                        '<p>The query did not return any author from the sources</p>',
+                                        '</div>'
+                                    ].join(''),
+                                },
+                                source: engine.ttAdapter()
+                        });
+                        $('#author_textbox').on('typeahead:selected', AppendAuthorToAuthorHiddenInput);
+                        $('#author_textbox').on('typeahead:closed',null);
                     });
 
-
-                if (document.getElementById('json_authors_input').value != "" && document.getElementById('json_authors_input').value != "None")
-                {
-                    importAuthorsFromInput();
-
-                }
-                engine.initialize();
-
-                $('.typeahead').typeahead({
-                    highlight: true,
-                    hint: true,
-                    minLength: 3
-                },
-                {
-                displayKey: dispkey,
-                templates: {
-                   suggestion: Handlebars.compile([
-                '<div id="autocomplete_element_{{position}}"><p class="author_autocomplete_email_field">{{email}}</p>',
-                '<p class="author_autocomplete_name_field">{{lastname}} {{firstname}} {{name}}</p>',
-                '<p class="author_autocomplete_affiliation_field">{{affiliation}}</p></div>'
-                ].join(''))},
-                source: engine.ttAdapter()
-                });
-                $('#author_textbox').on('typeahead:selected', AppendAuthorToAuthorHiddenInput);
-                $('#author_textbox').on('typeahead:closed',null);
-                $("#author_textbox").css("background-color","rgba(255,255,255,255)");
-                });
-
                 </script>''' % {"name": element['name'], "params": params, "value" : element['value'], "custom_authors":custom_authors, "contribution": contribution, "site_url":CFG_SITE_URL, \
-                        "custom_author_submit_button": custom_author_submit_button, "custom_author_use_text" : custom_author_use_text  }
+                        "custom_author_submit_button": custom_author_submit_button, "custom_author_use_text" : custom_author_use_text}
 
 
 def displaycplxdoc_displayauthaction(action, linkText):
