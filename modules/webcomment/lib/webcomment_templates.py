@@ -44,14 +44,15 @@ from invenio.config import CFG_SITE_URL, \
                            CFG_CERN_SITE, \
                            CFG_SITE_RECORD, \
                            CFG_WEBCOMMENT_MAX_ATTACHED_FILES, \
-                           CFG_WEBCOMMENT_MAX_ATTACHMENT_SIZE
+                           CFG_WEBCOMMENT_MAX_ATTACHMENT_SIZE, \
+                           CFG_WEBCOMMENT_ENABLE_HTML_EMAILS
 from invenio.htmlutils import get_html_text_editor, create_html_select
 from invenio.messages import gettext_set_language
 from invenio.bibformat import format_record
 from invenio.access_control_engine import acc_authorize_action
 from invenio.access_control_admin import acc_get_user_roles_from_user_info, acc_get_role_id
 from invenio.search_engine_utils import get_fieldvalues
-
+from bs4 import BeautifulSoup
 class Template:
     """templating class, refer to webcomment.py for examples of call"""
 
@@ -2177,7 +2178,7 @@ class Template:
     def tmpl_email_new_comment_header(self, recID, title, reviews,
                                       comID, report_numbers,
                                       can_unsubscribe=True,
-                                      ln=CFG_SITE_LANG, uid=-1):
+                                      ln=CFG_SITE_LANG, uid=-1, html_p=False):
         """
         Prints the email header used to notify subscribers that a new
         comment/review was added.
@@ -2200,14 +2201,22 @@ class Template:
                _("The following comment was sent to %(CFG_SITE_NAME)s by %(user_nickname)s:")) % \
                {'CFG_SITE_NAME': CFG_SITE_NAME,
                 'user_nickname': user_info['nickname']}
-        out += '\n(<%s>)' % (CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID))
+        if html_p:
+            out += '<br/>(<a href="%s">link to record </a>)' % (CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID))
+        else:
+            out += '\n(<%s>)' % (CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID))
+
         out += '\n\n\n'
+
+        if html_p:
+            out = out.replace('\n','<br/>')
+            out += '<style>blockquote {padding: 0 10px 0px 10px;border-left: 2px solid #36c;margin-left: 10px;}</style>'
         return out
 
     def tmpl_email_new_comment_footer(self, recID, title, reviews,
                                       comID, report_numbers,
                                       can_unsubscribe=True,
-                                      ln=CFG_SITE_LANG):
+                                      ln=CFG_SITE_LANG,html_p=False):
         """
         Prints the email footer used to notify subscribers that a new
         comment/review was added.
@@ -2226,22 +2235,45 @@ class Template:
         out = '\n\n-- \n'
         out += _("This is an automatic message, please don't reply to it.")
         out += '\n'
-        out += _("To post another comment, go to <%(x_url)s> instead.")  % \
+        if html_p:
+            out += _("To post another comment, go to <a href=%(x_url)s>here</a> instead.")  % \
                {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
                 (reviews and '/reviews' or '/comments') + '/add'}
-        out += '\n'
+            out += '<br/>'
+        else:
+            out += _("To post another comment, go to <%(x_url)s> instead.")  % \
+               {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
+                (reviews and '/reviews' or '/comments') + '/add'}
+            out += '\n'
         if not reviews:
-            out += _("To specifically reply to this comment, go to <%(x_url)s>")  % \
+            if html_p:
+                out += _("To specifically reply to this comment, go to <a href=%(x_url)s>here</a>")  % \
                    {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
                     '/comments/add?action=REPLY&comid=' + str(comID)}
-            out += '\n'
+                out += '<br/>'
+            else:
+                out += _("To specifically reply to this comment, go to <%(x_url)s>")  % \
+                   {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
+                    '/comments/add?action=REPLY&comid=' + str(comID)}
+                out += '\n'
         if can_unsubscribe:
-            out += _("To unsubscribe from this discussion, go to <%(x_url)s>")  % \
+            if html_p:
+                out += _("To unsubscribe from this discussion, go to <a href=%(x_url)s>here</a>")  % \
                    {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
                     '/comments/unsubscribe'}
-            out += '\n'
-        out += _("For any question, please use <%(CFG_SITE_SUPPORT_EMAIL)s>") % \
+                out += '<br/>'
+                out += _("For any question, please use <a href='mailto:%(CFG_SITE_SUPPORT_EMAIL)s'>%(CFG_SITE_SUPPORT_EMAIL)s</a> ") % \
                {'CFG_SITE_SUPPORT_EMAIL': CFG_SITE_SUPPORT_EMAIL}
+            else:
+                out += _("To unsubscribe from this discussion, go to <%(x_url)s>")  % \
+                   {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
+                    '/comments/unsubscribe'}
+                out += '\n'
+                out += _("For any question, please use <%(CFG_SITE_SUPPORT_EMAIL)s>") % \
+               {'CFG_SITE_SUPPORT_EMAIL': CFG_SITE_SUPPORT_EMAIL}
+
+        if html_p:
+            out = out.replace('\n','<br/>')
 
         return out
 

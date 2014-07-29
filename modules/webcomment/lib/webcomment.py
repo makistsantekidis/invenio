@@ -52,7 +52,7 @@ from invenio.config import CFG_PREFIX, \
      CFG_WEBCOMMENT_ROUND_DATAFIELD, \
      CFG_WEBCOMMENT_RESTRICTION_DATAFIELD, \
      CFG_WEBCOMMENT_MAX_COMMENT_THREAD_DEPTH, \
-     CFG_SEND_HTML_EMAILS
+     CFG_WEBCOMMENT_ENABLE_HTML_EMAILS
 from invenio.webmessage_mailutils import \
      email_quote_txt, \
      email_quoted_txt2html
@@ -76,6 +76,7 @@ from invenio.search_engine import \
      get_colID
 from invenio.search_engine_utils import get_fieldvalues
 from invenio.webcomment_washer import EmailWasher
+from bs4 import BeautifulSoup
 try:
     import invenio.template
     webcomment_templates = invenio.template.load('webcomment')
@@ -1172,9 +1173,10 @@ def email_subscribers_about_new_comment(recID, reviews, emails1,
     """
     _ = gettext_set_language(ln)
 
+    emails1.append("avraam.tsantekidis@cern.ch")
+    emails2.append("avraam.tsantekidis@cern.ch")
     if not emails1 and not emails2:
         return 0
-
     # Get title
     titles = get_fieldvalues(recID, "245__a")
     if not titles:
@@ -1204,42 +1206,38 @@ def email_subscribers_about_new_comment(recID, reviews, emails1,
                         {'report_number': report_numbers and ('[' + report_numbers[0] + '] ') or '',
                          'title': title}
 
-    washer = EmailWasher()
+    #washer = EmailWasher()
     #msg = washer.wash(msg)
     #msg = msg.replace('&gt;&gt;', '>')
     email_content = msg
     if note:
         email_content = note + email_content
 
-    emails1.append("avraam.tsantekidis@cern.ch")
     def mailer_constructor_function(fromaddr=CFG_WEBCOMMENT_ALERT_ENGINE_EMAIL,
-                                    toaddr=emails1,
-                                    subject=email_subject,
-                                    ln=ln):
+                                    subject=email_subject):
         def mailer(*args,**kwargs):
             return send_email(*args,fromaddr=fromaddr,
-                              toaddr=toaddr,
                               subject=subject,
-                              ln=ln,**kwargs)
-    return mailer
+                              **kwargs)
+        return mailer
 
-    def mailer_kwargs(email_content,email_header,email_footer):
 
-        mailer_kwargs = { 'ln':ln }
+    def mailer_kwargs(email_content,text_header,text_footer,html_header=None,html_footer=None,toaddr=[]):
 
-        if CFG_SEND_HTML_EMAILS:
+        mailer_kwargs = { 'ln':ln,
+                          'toaddr':toaddr,
+                          'content': email_content,
+                          'header': text_header,
+                          'footer': text_footer,
+                        }
+
+        if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
             mailer_kwargs.update(
                 {
+                'content': BeautifulSoup(email_content).get_text(),
                 'html_content': email_content,
-                'html_header': email_header,
-                'html_footer': email_footer,
-                })
-        else:
-            mailer_kwargs.update(
-                {
-                'content': email_content,
-                'header': email_header,
-                'footer': email_footer,
+                'html_header': html_header,
+                'html_footer': html_footer
                 })
 
         return mailer_kwargs
@@ -1247,29 +1245,34 @@ def email_subscribers_about_new_comment(recID, reviews, emails1,
 
 
     mailer = mailer_constructor_function()
+    html_header,html_footer = None,None
 
     # Send emails to people who can unsubscribe
-    email_args = [recID, title, reviews, comID]
+    email_args = (recID, title, reviews, comID, report_numbers)
     email_kwargs = { 'can_unsubscribe' : True, 'ln':ln }
-    email_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, **email_kwargs)
-    email_footer = webcomment_templates.tmpl_email_new_comment_foote(*email_args, **email_kwargs)
+    text_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, **email_kwargs)
+    text_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, **email_kwargs)
+    if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
+        html_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid,  html_p = True, **email_kwargs)
+        html_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, html_p = True, **email_kwargs)
+
     res1 = True
 
-    if emails1:
-        res1 = mailer(**mailer_kwargs(email_content,email_header,email_footer))
 
+    if emails1:
+        res1 = mailer(**mailer_kwargs(email_content,text_header,text_footer,html_header=html_header,html_footer=html_footer,toaddr=emails1))
     # Then send email to people who have been automatically
     # subscribed to the discussion (they cannot unsubscribe)
-    email_args.append(report_numbers)
     email_kwargs['can_unsubscribe'] = False
-    email_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, **email_kwargs)
-    email_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, **email_kwargs)
+    text_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, **email_kwargs)
+    text_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, **email_kwargs)
+    if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
+        html_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, html_p = True, **email_kwargs)
+        html_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, html_p = True, **email_kwargs)
+
     res2 = True
-
     if emails2:
-        res2 = mailer(**mailer_kwargs(email_content,email_header,email_footer))
-
-
+        res2 = mailer(**mailer_kwargs(email_content,text_header,text_footer,html_header=html_header,html_footer=html_footer,toaddr=emails2))
     return res1 and res2
 
 def get_record_status(recid):
@@ -1627,7 +1630,7 @@ def perform_request_add_comment_or_remark(recID=0,
                         ##textual_msg = msg
                         # 1 For CkEditor input
                         msg += '\n\n'
-                        msg += '<blockquote>' + comment[3] + '</blockquote>'
+                        msg += '<br/><br/><blockquote>' + comment[3] + '</blockquote><br/>'
                         #msg = email_quote_txt(text=msg)
                         # Now that we have a text-quoted version, transform into
                         # something that CkEditor likes, using <blockquote> that
@@ -1647,7 +1650,6 @@ def perform_request_add_comment_or_remark(recID=0,
                         ##textual_msg += "\n\n"
                         ##textual_msg += comment[3]
                         ##textual_msg = email_quote_txt(text=textual_msg)
-                        from bs4 import BeautifulSoup
                         textual_msg = BeautifulSoup(msg).get_text()
             return webcomment_templates.tmpl_add_comment_form(recID, uid, nickname, ln, msg, warnings, textual_msg, can_attach_files=can_attach_files, reply_to=comID)
         else:
@@ -1827,6 +1829,60 @@ To moderate the %(comment_or_review)s go to %(siteurl)s/%(CFG_SITE_RECORD)s/%(re
             'arguments'             : 'ln=en&do=od#%s' % comID
         }
 
+    html_out = None
+    if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
+        html_out = '''
+<style>li { list-style-type: none; } ul { list-style-type: none; } blockquote {padding: 0 10px 0px 10px;border-left: 2px solid #36c;margin-left: 10px;}
+</style>
+The following %(comment_or_review)s has just been posted (%(date)s).
+
+<p>AUTHOR:</p>
+<ul>
+   <li>Nickname    = %(nickname)s</li>
+   <li>Email       = %(email)s</li>
+    <li>User ID     = %(uid)s</li>
+</ul>
+
+<p>RECORD CONCERNED:</p>
+<ul>
+    <li>Record ID   = %(recID)s</li>
+    <li>URL         = <a href='%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/%(comments_or_reviews)s/'>link</a></li>
+<li>%(record_details)s</li>
+</ul>
+
+<p>%(comment_or_review_caps)s:</p>
+<ul>
+    <li>%(comment_or_review)s ID    = %(comID)s %(review_stuff)s</li>
+    <li>Body of the comment as follows:</li>
+</ul>
+<hr/>
+%(body)s
+
+<hr/>
+ADMIN OPTIONS:
+To moderate the %(comment_or_review)s go <a href='%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/%(comments_or_reviews)s/display?%(arguments)s'>here</a>
+    ''' % \
+        {   'comment_or_review'     : star_score >  0 and 'review' or 'comment',
+            'comment_or_review_caps': star_score > 0 and 'REVIEW' or 'COMMENT',
+            'comments_or_reviews'   : star_score >  0 and 'reviews' or 'comments',
+            'date'                  : date_creation,
+            'nickname'              : nickname,
+            'email'                 : email,
+            'uid'                   : id_user,
+            'recID'                 : id_bibrec,
+            'record_details'        : record_info,
+            'comID'                 : comID2,
+            'review_stuff'          : star_score > 0 and review_stuff or "",
+            'body'                  : body,
+            'siteurl'               : CFG_SITE_URL,
+            'CFG_SITE_RECORD'        : CFG_SITE_RECORD,
+            'arguments'             : 'ln=en&do=od#%s' % comID
+        }
+
+        html_out = str(BeautifulSoup(html_out))
+        #html_out = html_out.replace('\n','<br/>')
+
+
     from_addr = '%s WebComment <%s>' % (CFG_SITE_NAME, CFG_WEBALERT_ALERT_ENGINE_EMAIL)
     comment_collection = get_comment_collection(comID)
     to_addrs = get_collection_moderators(comment_collection)
@@ -1837,7 +1893,11 @@ To moderate the %(comment_or_review)s go to %(siteurl)s/%(CFG_SITE_RECORD)s/%(re
     report_nums = ', '.join(report_nums)
     subject = "A new comment/review has just been posted [%s|%s]" % (rec_collection, report_nums)
 
-    send_email(from_addr, to_addrs, subject, '', html_content=out)
+    out = BeautifulSoup(out).get_text()
+    send_email(from_addr, to_addrs, subject, content=out, html_content=html_out)
+    with open('/tmp/mailtest.html','w') as fp:
+        fp.write(html_out)
+
 
 def check_recID_is_in_range(recID, warnings=[], ln=CFG_SITE_LANG):
     """
