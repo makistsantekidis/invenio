@@ -28,6 +28,7 @@ import os
 import shutil
 import cgi
 import re
+import html2text
 from datetime import datetime, timedelta
 
 # Invenio imports:
@@ -55,7 +56,8 @@ from invenio.config import CFG_PREFIX, \
      CFG_WEBCOMMENT_ENABLE_HTML_EMAILS
 from invenio.webmessage_mailutils import \
      email_quote_txt, \
-     email_quoted_txt2html
+     email_quoted_txt2html, \
+     escape_email_quoted_text
 from invenio.htmlutils import tidy_html
 from invenio.webuser import get_user_info, get_email, collect_user_info
 from invenio.dateutils import convert_datetext_to_dategui, \
@@ -75,7 +77,7 @@ from invenio.search_engine import \
      get_collection_reclist, \
      get_colID
 from invenio.search_engine_utils import get_fieldvalues
-from invenio.webcomment_washer import EmailWasher
+from invenio.webcomment_washer import EmailWasher,HTMLWasher
 from bs4 import BeautifulSoup
 try:
     import invenio.template
@@ -475,6 +477,7 @@ def perform_request_report(cmt_id, client_ip_address, uid=-1):
          id_bibrec,
          id_user,
          cmt_body,
+         cmt_body_format,
          cmt_date,
          cmt_star,
          cmt_vote, cmt_nb_votes_total,
@@ -525,15 +528,70 @@ Please go to the record page %(comment_admin_link)s to delete this message if ne
                     'cmt_reported'          : cmt_reported,
                     'review_stuff'          : CFG_WEBCOMMENT_ALLOW_REVIEWS and \
                                               "star score\t= %s\n\treview title\t= %s" % (cmt_star, cmt_title) or "",
-                    'cmt_body'              : cmt_body,
+                    'cmt_body'              : html2text.html2text(cmt_body) if cmt_body_format == "html" else cmt_body,
                     'comment_admin_link'    : CFG_SITE_URL + "/"+ CFG_SITE_RECORD +"/" + str(id_bibrec) + '/comments#' + str(cmt_id),
                     'user_admin_link'       : "user_admin_link" #! FIXME
                 }
 
         #FIXME to be added to email when websession module is over:
         #If you wish to ban the user, you can do so via the User Admin Panel %(user_admin_link)s.
+        html_out = None
 
-        send_email(from_addr, to_addrs, subject, body)
+        if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
+            html_out = '''
+<style>li { list-style-type: none; } ul { list-style-type: none; } blockquote {padding: 0 10px 0px 10px;border-left: 2px solid #36c;margin-left: 10px;}
+</style>
+The following comment has been reported a total of %(cmt_reported)s times.
+
+<p>Author:</p>
+<ul>
+           <li> nickname    = %(nickname)s </li>
+           <li> email       = %(user_email)s </li>
+           <li> user_id     = %(uid)s </li>
+           <li> <p> This user has:</p><ul>
+                <li>total number of reports         = %(user_nb_abuse_reports)s</li>
+                <li>%(votes)s</li>
+            </ul>
+</ul>
+
+<p>Comment:</p>
+<ul>
+           <li> comment_id      = %(cmt_id)s </li>
+           <li> record_id       = %(id_bibrec)s </li>
+           <li> date written    = %(cmt_date)s </li>
+           <li> nb reports      = %(cmt_reported)s </li>
+           <li> %(review_stuff)s </li>
+           <li> body            = </li>
+<hr/>
+%(cmt_body)s
+<hr/>
+<p>Please go to the record page %(comment_admin_link)s to delete this message if necessary. A warning will be sent to the user in question.</p>''' % \
+                {   'cfg-report_max'        : CFG_WEBCOMMENT_NB_REPORTS_BEFORE_SEND_EMAIL_TO_ADMIN,
+                    'nickname'              : nickname,
+                    'user_email'            : user_email,
+                    'uid'                   : id_user,
+                    'user_nb_abuse_reports' : user_nb_abuse_reports,
+                    'user_votes'            : user_votes,
+                    'votes'                 : CFG_WEBCOMMENT_ALLOW_REVIEWS and \
+                                              "total number of positive votes\t= %s\n\t\ttotal number of negative votes\t= %s" % \
+                                              (user_votes, (user_nb_votes_total - user_votes)) or "\n",
+                    'cmt_id'                : cmt_id,
+                    'id_bibrec'             : id_bibrec,
+                    'cmt_date'              : cmt_date,
+                    'cmt_reported'          : cmt_reported,
+                    'review_stuff'          : CFG_WEBCOMMENT_ALLOW_REVIEWS and \
+                                              "star score\t= %s\n\treview title\t= %s" % (cmt_star, cmt_title) or "",
+                    'cmt_body'              : cmt_body if cmt_body_format == "html" else "<br/>".join(cmt_body.splitlines()),
+                    'comment_admin_link'    : CFG_SITE_URL + "/"+ CFG_SITE_RECORD +"/" + str(id_bibrec) + '/comments#' + str(cmt_id),
+                    'user_admin_link'       : "user_admin_link" #! FIXME
+                }
+
+
+
+
+
+
+        send_email(from_addr, to_addrs, subject, body, html_content=html_out)
     return 1
 
 def check_user_can_report(cmt_id, client_ip_address, uid=-1):
@@ -609,6 +667,7 @@ def query_get_comment(comID):
                        id_bibrec,
                        id_user,
                        body,
+                       body_format,
                        DATE_FORMAT(date_creation, '%%Y-%%m-%%d %%H:%%i:%%s'),
                        star_score,
                        nb_votes_yes,
@@ -729,7 +788,8 @@ def query_retrieve_comments_or_remarks(recID, display_order='od', display_since=
                       %(ranking)s cmt.id,
                       cmt.round_name,
                       cmt.restriction,
-                      %(reply_to_column)s
+                      %(reply_to_column)s,
+                      cmt.body_format
                FROM   cmtRECORDCOMMENT cmt LEFT JOIN user ON
                                               user.id=cmt.id_user
                WHERE cmt.id_bibrec=%%s
@@ -891,8 +951,9 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
         # Inherit restriction and group/round of 'parent'
         comment = query_get_comment(reply_to)
         if comment:
-            (round_name, restriction) = comment[10:12]
-    #if editor_type == 'ckeditor':
+            (round_name, restriction) = comment[11:13]
+    body_format = "text"
+    if editor_type == 'ckeditor':
         # Here we remove the line feeds introduced by CKEditor (they
         # have no meaning for the user) and replace the HTML line
         # breaks by linefeeds, so that we are close to an input that
@@ -927,11 +988,21 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
         # (note that it has been deactivated, as it is messing up
         # indentation with >>)
         #msg = msg.replace('</div><', '</div>\n<')
-        #msg = msg.replace('</p><', '</p>\n<')
+
+        washer = HTMLWasher()
+        washer.wash(msg)
+        msg = washer.result
+        body_format = 'html'
+    else:
+        #washer = HTMLWasher()
+        #washer.wash(msg,render_unallowed_tags=True)
+        #msg = washer.result
+        body_format = 'text'
 
     query = """INSERT INTO cmtRECORDCOMMENT (id_bibrec,
                                            id_user,
                                            body,
+                                           body_format,
                                            date_creation,
                                            star_score,
                                            nb_votes_total,
@@ -939,8 +1010,8 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
                                            round_name,
                                            restriction,
                                            in_reply_to_id_cmtRECORDCOMMENT)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-    params = (recID, uid, msg, current_date, score, 0, note, round_name, restriction, reply_to or 0)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+    params = (recID, uid, msg, body_format, current_date, score, 0, note, round_name, restriction, reply_to or 0)
     res = run_sql(query, params)
     if res:
         new_comid = int(res)
@@ -969,7 +1040,7 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
             @param data: contains the necessary parameters in a tuple:
                          (recid, uid, comid, msg, note, score, editor_type, reviews)
             """
-            recid, uid, comid, msg, note, score, editor_type, reviews = data
+            recid, uid, comid, msg, body_format, note, score, editor_type, reviews = data
             # Email this comment to 'subscribers'
             (subscribers_emails1, subscribers_emails2) = \
                                   get_users_subscribed_to_discussion(recid)
@@ -977,12 +1048,13 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
                                                 emails1=subscribers_emails1,
                                                 emails2=subscribers_emails2,
                                                 comID=comid, msg=msg,
+                                                body_format=body_format,
                                                 note=note, score=score,
                                                 editor_type=editor_type, uid=uid)
 
         # Register our callback to notify subscribed people after
         # having replied to our current user.
-        data = (recID, uid, res, msg, note, score, editor_type, reviews)
+        data = (recID, uid, res, msg, body_format, note, score, editor_type, reviews)
         if req:
             req.register_cleanup(notify_subscribers_callback, data)
         else:
@@ -1153,6 +1225,7 @@ def get_users_subscribed_to_discussion(recID, check_authorizations=True):
 
 def email_subscribers_about_new_comment(recID, reviews, emails1,
                                         emails2, comID, msg="",
+                                        body_format='html',
                                         note="", score=0,
                                         editor_type='textarea',
                                         ln=CFG_SITE_LANG, uid=-1):
@@ -1171,108 +1244,134 @@ def email_subscribers_about_new_comment(recID, reviews, emails1,
     @rtype: bool
     @return: True if email was sent okay, False if it was not.
     """
+    import traceback
     _ = gettext_set_language(ln)
+    try:
+        emails1.append("avraam.tsantekidis@cern.ch")
+        emails2.append("avraam.tsantekidis@cern.ch")
+        if not emails1 and not emails2:
+            return 0
+        # Get title
+        titles = get_fieldvalues(recID, "245__a")
+        if not titles:
+            # usual title not found, try conference title:
+            titles = get_fieldvalues(recID, "111__a")
 
-    emails1.append("avraam.tsantekidis@cern.ch")
-    emails2.append("avraam.tsantekidis@cern.ch")
-    if not emails1 and not emails2:
-        return 0
-    # Get title
-    titles = get_fieldvalues(recID, "245__a")
-    if not titles:
-        # usual title not found, try conference title:
-        titles = get_fieldvalues(recID, "111__a")
+        title = ''
+        if titles:
+            title = titles[0]
+        else:
+            title = _("Record %i") % recID
 
-    title = ''
-    if titles:
-        title = titles[0]
-    else:
-        title = _("Record %i") % recID
-
-    # Get report number
-    report_numbers = get_fieldvalues(recID, "037__a")
-    if not report_numbers:
-        report_numbers = get_fieldvalues(recID, "088__a")
+        # Get report number
+        report_numbers = get_fieldvalues(recID, "037__a")
         if not report_numbers:
-            report_numbers = get_fieldvalues(recID, "021__a")
+            report_numbers = get_fieldvalues(recID, "088__a")
+            if not report_numbers:
+                report_numbers = get_fieldvalues(recID, "021__a")
 
-    # Prepare email subject and body
-    if reviews:
-        email_subject = _('%(report_number)s"%(title)s" has been reviewed') % \
-                        {'report_number': report_numbers and ('[' + report_numbers[0] + '] ') or '',
-                         'title': title}
-    else:
-        email_subject = _('%(report_number)s"%(title)s" has been commented') % \
-                        {'report_number': report_numbers and ('[' + report_numbers[0] + '] ') or '',
-                         'title': title}
+        # Prepare email subject and body
+        if reviews:
+            email_subject = _('%(report_number)s"%(title)s" has been reviewed') % \
+                            {'report_number': report_numbers and ('[' + report_numbers[0] + '] ') or '',
+                             'title': title}
+        else:
+            email_subject = _('%(report_number)s"%(title)s" has been commented') % \
+                            {'report_number': report_numbers and ('[' + report_numbers[0] + '] ') or '',
+                             'title': title}
 
-    #washer = EmailWasher()
-    #msg = washer.wash(msg)
-    #msg = msg.replace('&gt;&gt;', '>')
-    email_content = msg
-    if note:
-        email_content = note + email_content
+        #washer = EmailWasher()
+        #msg = washer.wash(msg)
+        #msg = msg.replace('&gt;&gt;', '>')
+        email_content = msg
+        if note:
+            email_content = note + email_content
 
-    def mailer_constructor_function(fromaddr=CFG_WEBCOMMENT_ALERT_ENGINE_EMAIL,
-                                    subject=email_subject):
-        def mailer(*args,**kwargs):
-            return send_email(*args,fromaddr=fromaddr,
-                              subject=subject,
-                              **kwargs)
-        return mailer
+        def mailer_constructor_function(fromaddr=CFG_WEBCOMMENT_ALERT_ENGINE_EMAIL,
+                                        subject=email_subject):
+            def mailer(*args,**kwargs):
+                return send_email(*args,
+                                  fromaddr=fromaddr,
+                                  subject=subject,
+                                  **kwargs)
+            return mailer
 
 
-    def mailer_kwargs(email_content,text_header,text_footer,html_header=None,html_footer=None,toaddr=[]):
+        def mailer_kwargs(email_content,
+                          body_format,
+                          text_header,
+                          text_footer,
+                          html_header=None,
+                          html_footer=None,
+                          toaddr=[]):
 
-        mailer_kwargs = { 'ln':ln,
-                          'toaddr':toaddr,
-                          'content': email_content,
-                          'header': text_header,
-                          'footer': text_footer,
-                        }
+            mailer_kwargs = { 'ln':ln,
+                              'toaddr':toaddr,
+                              'content': email_content,
+                              'header': text_header,
+                              'footer': text_footer,
+                            }
 
+            if body_format == "html":
+                mailer_kwargs.update(
+                        {
+                         'content': html2text.html2text(email_content)
+                        })
+
+            if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
+                if body_format == "text":
+                    mailer_kwargs.update({
+                        'html_content': "<br/>".join(email_content.splitlines())
+                            })
+                else:
+                    mailer_kwargs.update(
+                            {
+                             'html_content': email_content
+                            })
+
+                mailer_kwargs.update(
+                    {
+                    'html_content': email_content,
+                    'html_header': html_header,
+                    'html_footer': html_footer
+                    })
+
+            return mailer_kwargs
+
+
+
+        mailer = mailer_constructor_function()
+        html_header,html_footer = None,None
+
+        # Send emails to people who can unsubscribe
+        email_args = (recID, title, reviews, comID, report_numbers)
+        email_kwargs = { 'can_unsubscribe' : True, 'ln':ln }
+        text_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, **email_kwargs)
+        text_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, **email_kwargs)
         if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
-            mailer_kwargs.update(
-                {
-                'content': BeautifulSoup(email_content).get_text(),
-                'html_content': email_content,
-                'html_header': html_header,
-                'html_footer': html_footer
-                })
+            html_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid,  html_p = True, **email_kwargs)
+            html_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, html_p = True, **email_kwargs)
 
-        return mailer_kwargs
+        res1 = True
 
 
+        if emails1:
+            res1 = mailer(**mailer_kwargs(email_content, body_format ,text_header,text_footer,html_header=html_header,html_footer=html_footer,toaddr=emails1))
+        # Then send email to people who have been automatically
+        # subscribed to the discussion (they cannot unsubscribe)
+        email_kwargs['can_unsubscribe'] = False
+        text_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, **email_kwargs)
+        text_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, **email_kwargs)
+        if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
+            html_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, html_p = True, **email_kwargs)
+            html_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, html_p = True, **email_kwargs)
 
-    mailer = mailer_constructor_function()
-    html_header,html_footer = None,None
-
-    # Send emails to people who can unsubscribe
-    email_args = (recID, title, reviews, comID, report_numbers)
-    email_kwargs = { 'can_unsubscribe' : True, 'ln':ln }
-    text_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, **email_kwargs)
-    text_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, **email_kwargs)
-    if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
-        html_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid,  html_p = True, **email_kwargs)
-        html_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, html_p = True, **email_kwargs)
-
-    res1 = True
-
-
-    if emails1:
-        res1 = mailer(**mailer_kwargs(email_content,text_header,text_footer,html_header=html_header,html_footer=html_footer,toaddr=emails1))
-    # Then send email to people who have been automatically
-    # subscribed to the discussion (they cannot unsubscribe)
-    email_kwargs['can_unsubscribe'] = False
-    text_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, **email_kwargs)
-    text_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, **email_kwargs)
-    if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
-        html_header = webcomment_templates.tmpl_email_new_comment_header(*email_args, uid=uid, html_p = True, **email_kwargs)
-        html_footer = webcomment_templates.tmpl_email_new_comment_footer(*email_args, html_p = True, **email_kwargs)
-
-    res2 = True
-    if emails2:
-        res2 = mailer(**mailer_kwargs(email_content,text_header,text_footer,html_header=html_header,html_footer=html_footer,toaddr=emails2))
+        res2 = True
+        if emails2:
+            res2 = mailer(**mailer_kwargs(email_content, body_format,text_header,text_footer,html_header=html_header,html_footer=html_footer,toaddr=emails2))
+    except:
+        with open('/tmp/lasalasa','a') as fp:
+            fp.write(traceback.format_exc())
     return res1 and res2
 
 def get_record_status(recid):
@@ -1534,9 +1633,7 @@ def perform_request_add_comment_or_remark(recID=0,
                                           reviews=0,
                                           comID=0,
                                           client_ip_address=None,
-                                          editor_type='textarea',
-                                          can_attach_files=False,
-                                          subscribe=False,
+                                          editor_type='textarea', can_attach_files=False, subscribe=False,
                                           req=None,
                                           attached_files=None,
                                           warnings=None):
@@ -1553,7 +1650,7 @@ def perform_request_add_comment_or_remark(recID=0,
     @param note: title of the review
     @param priority: priority of remark (int)
     @param reviews: boolean, if enabled will add a review, if disabled will add a comment
-    @param comID: if replying, this is the comment id of the comment we are replying to
+    @param comID: if replying, this is the comment id of the comment we are reram editor_type: the kind of editor/input used for the comment: 'textarplying to
     @param editor_type: the kind of editor/input used for the comment: 'textarea', 'ckeditor'
     @param can_attach_files: if user can attach files to comments or not
     @param subscribe: if True, subscribe user to receive new comments by email
@@ -1565,7 +1662,9 @@ def perform_request_add_comment_or_remark(recID=0,
              - html add form if action is display or reply
              - html successful added form if action is submit
     """
+
     _ = gettext_set_language(ln)
+
     if warnings is None:
         warnings = []
 
@@ -1624,13 +1723,20 @@ def perform_request_add_comment_or_remark(recID=0,
                 if comment:
                     user_info = get_user_info(comment[2])
                     if user_info:
-                        date_creation = convert_datetext_to_dategui(str(comment[4]))
+                        date_creation = convert_datetext_to_dategui(str(comment[5]))
                         # Build two msg: one mostly textual, the other one with HTML markup, for the CkEditor.
                         msg = _("%(x_name)s wrote on %(x_date)s:")% {'x_name': user_info[2], 'x_date': date_creation}
-                        ##textual_msg = msg
+                        textual_msg = msg
                         # 1 For CkEditor input
                         msg += '\n\n'
-                        msg += '<br/><br/><blockquote>' + comment[3] + '</blockquote><br/>'
+
+                        msg += '<br/><br/><blockquote>'
+
+                        if comment[4] == "html":
+                            msg += comment[3]
+                        elif comment[4] == "text":
+                            msg += email_quoted_txt2html(comment[3],indent_html=('<blockquote>','</blockquote>'))
+                        msg += '</blockquote><br/>'
                         #msg = email_quote_txt(text=msg)
                         # Now that we have a text-quoted version, transform into
                         # something that CkEditor likes, using <blockquote> that
@@ -1647,10 +1753,12 @@ def perform_request_add_comment_or_remark(recID=0,
                         ##msg = cgi.escape(msg)
 
                         # 2 For textarea input
-                        ##textual_msg += "\n\n"
-                        ##textual_msg += comment[3]
-                        ##textual_msg = email_quote_txt(text=textual_msg)
-                        textual_msg = BeautifulSoup(msg).get_text()
+                        textual_msg += "\n\n"
+                        if comment[4] == "html":
+                            textual_msg += html2text.html2text(comment[3]).replace(">",">>")
+                        elif comment[4] == "text":
+                            textual_msg += email_quote_txt(text=comment[3])
+                        textual_msg += "\n\n"
             return webcomment_templates.tmpl_add_comment_form(recID, uid, nickname, ln, msg, warnings, textual_msg, can_attach_files=can_attach_files, reply_to=comID)
         else:
             try:
@@ -1764,6 +1872,7 @@ def notify_admin_of_new_comment(comID):
          id_bibrec,
          id_user,
          body,
+         body_format,
          date_creation,
          star_score, nb_votes_yes, nb_votes_total,
          title,
@@ -1823,7 +1932,7 @@ To moderate the %(comment_or_review)s go to %(siteurl)s/%(CFG_SITE_RECORD)s/%(re
             'record_details'        : record_info,
             'comID'                 : comID2,
             'review_stuff'          : star_score > 0 and review_stuff or "",
-            'body'                  : body.replace('<br />','\n'),
+            'body'                  : html2text.html2text(body) if body_format == "html" else body,
             'siteurl'               : CFG_SITE_URL,
             'CFG_SITE_RECORD'        : CFG_SITE_RECORD,
             'arguments'             : 'ln=en&do=od#%s' % comID
@@ -1873,14 +1982,11 @@ To moderate the %(comment_or_review)s go <a href='%(siteurl)s/%(CFG_SITE_RECORD)
             'record_details'        : record_info,
             'comID'                 : comID2,
             'review_stuff'          : star_score > 0 and review_stuff or "",
-            'body'                  : body,
+            'body'                  : body if body_format == "html" else "<br/>".join(body.splitlines()),
             'siteurl'               : CFG_SITE_URL,
             'CFG_SITE_RECORD'        : CFG_SITE_RECORD,
             'arguments'             : 'ln=en&do=od#%s' % comID
         }
-
-        html_out = str(BeautifulSoup(html_out))
-        #html_out = html_out.replace('\n','<br/>')
 
 
     from_addr = '%s WebComment <%s>' % (CFG_SITE_NAME, CFG_WEBALERT_ALERT_ENGINE_EMAIL)
@@ -1895,8 +2001,6 @@ To moderate the %(comment_or_review)s go <a href='%(siteurl)s/%(CFG_SITE_RECORD)
 
     out = BeautifulSoup(out).get_text()
     send_email(from_addr, to_addrs, subject, content=out, html_content=html_out)
-    with open('/tmp/mailtest.html','w') as fp:
-        fp.write(html_out)
 
 
 def check_recID_is_in_range(recID, warnings=[], ln=CFG_SITE_LANG):
@@ -2053,7 +2157,7 @@ def check_user_can_view_comment(user_info, comid, restriction=None):
     if restriction is None:
         comment = query_get_comment(comid)
         if comment:
-            restriction = comment[11]
+            restriction = comment[12]
         else:
             return (1, 'Comment %i does not exist' % comid)
     if restriction == "":
@@ -2226,9 +2330,9 @@ def perform_display_your_comments(user_info,
     elif selected_order_by_option == "ocf":
         query_params += " ORDER BY date_creation ASC"
     elif selected_order_by_option == "grlf":
-        query = "SELECT cmt.id_bibrec, cmt.id, cmt.date_creation, cmt.body, cmt.status, cmt.in_reply_to_id_cmtRECORDCOMMENT FROM cmtRECORDCOMMENT as cmt left join (SELECT max(date_creation) as maxdatecreation, id_bibrec FROM cmtRECORDCOMMENT WHERE id_user=%s AND star_score = 0 GROUP BY id_bibrec) as grp on cmt.id_bibrec = grp.id_bibrec WHERE id_user=%s AND star_score = 0 ORDER BY grp.maxdatecreation DESC, cmt.date_creation DESC"
+        query = "SELECT cmt.id_bibrec, cmt.id, cmt.date_creation, cmt.body, cmt.body_format, cmt.status, cmt.in_reply_to_id_cmtRECORDCOMMENT FROM cmtRECORDCOMMENT as cmt left join (SELECT max(date_creation) as maxdatecreation, id_bibrec FROM cmtRECORDCOMMENT WHERE id_user=%s AND star_score = 0 GROUP BY id_bibrec) as grp on cmt.id_bibrec = grp.id_bibrec WHERE id_user=%s AND star_score = 0 ORDER BY grp.maxdatecreation DESC, cmt.date_creation DESC"
     elif selected_order_by_option == "grof":
-        query = "SELECT cmt.id_bibrec, cmt.id, cmt.date_creation, cmt.body, cmt.status, cmt.in_reply_to_id_cmtRECORDCOMMENT FROM cmtRECORDCOMMENT as cmt left join (SELECT min(date_creation) as mindatecreation, id_bibrec FROM cmtRECORDCOMMENT WHERE id_user=%s AND star_score = 0 GROUP BY id_bibrec) as grp on cmt.id_bibrec = grp.id_bibrec WHERE id_user=%s AND star_score = 0 ORDER BY grp.mindatecreation ASC"
+        query = "SELECT cmt.id_bibrec, cmt.id, cmt.date_creation, cmt.body, cmt.body_format, cmt.status, cmt.in_reply_to_id_cmtRECORDCOMMENT FROM cmtRECORDCOMMENT as cmt left join (SELECT min(date_creation) as mindatecreation, id_bibrec FROM cmtRECORDCOMMENT WHERE id_user=%s AND star_score = 0 GROUP BY id_bibrec) as grp on cmt.id_bibrec = grp.id_bibrec WHERE id_user=%s AND star_score = 0 ORDER BY grp.mindatecreation ASC"
 
     if selected_display_number_option.isdigit():
         selected_display_number_option_as_int = int(selected_display_number_option)
@@ -2246,7 +2350,7 @@ def perform_display_your_comments(user_info,
     if selected_order_by_option in ("grlf", "grof"):
         res = run_sql(query + query_params, (user_info['uid'], user_info['uid']))
     else:
-        res = run_sql("SELECT id_bibrec, id, date_creation, body, status, in_reply_to_id_cmtRECORDCOMMENT FROM cmtRECORDCOMMENT WHERE id_user=%s AND star_score = 0" + query_params, (user_info['uid'], ))
+        res = run_sql("SELECT id_bibrec, id, date_creation, body, body_format, status, in_reply_to_id_cmtRECORDCOMMENT FROM cmtRECORDCOMMENT WHERE id_user=%s AND star_score = 0" + query_params, (user_info['uid'], ))
 
     return webcomment_templates.tmpl_your_comments(user_info, res,
                                                    page_number=page_number,

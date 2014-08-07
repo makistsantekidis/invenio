@@ -1217,12 +1217,14 @@ form input[disabled], form input[disabled="true"]{
    color: #603;
    background: #fff;
 }
-.commentbox {
-   /*color: #000;*/
+
+.commentbox2 {
+   /*color: #000;
    width: 100%;
    padding: 0px 10px 10px 10px;
    border-left: 2px solid #36c;
-   margin-left: 10px;
+   margin-left: 10px;*/
+   margin: 10px;
 }
 
 /* Write comment */
@@ -3491,7 +3493,15 @@ div.bibcircbottom {
 }
 
 .webcomment_comment_box blockquote {
-	margin: 10px;
+	padding: 0 10px 0px 10px;
+        border-left: 2px solid #36c;
+        margin: 10px;
+}
+
+.webcomment_comment_box .commentbox {
+	padding: 0 10px 0px 10px;
+        border-left: 2px solid #36c;
+        margin: 10px;
 }
 
 .webcomment_comment_options {

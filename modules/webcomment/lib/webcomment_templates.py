@@ -75,6 +75,7 @@ class Template:
         c_date_creation = 2
         c_body = 3
         c_id = 6
+        c_body_format = 10
 
         warnings = self.tmpl_warnings(warnings, ln)
 
@@ -113,7 +114,8 @@ class Template:
                 reply_link = '%s/%s/%s/comments/add?ln=%s&amp;comid=%s&amp;action=REPLY' % (CFG_SITE_URL, CFG_SITE_RECORD, recID, ln, comment[c_id])
                 comment_rows += self.tmpl_get_comment_without_ranking(req=None, ln=ln, nickname=messaging_link, comment_uid=comment[c_user_id],
                                                                       date_creation=comment[c_date_creation],
-                                                                      body=comment[c_body], status='', nb_reports=0,
+                                                                      body=comment[c_body], body_format=comment[c_body_format],
+                                                                      status='', nb_reports=0,
                                                                       report_link=report_link, reply_link=reply_link, recID=recID)
                 comment_rows += """
                                 <br />
@@ -219,6 +221,7 @@ class Template:
         c_star_score = 6
         c_title = 7
         c_id = 8
+        c_body_format = 14
 
         warnings = self.tmpl_warnings(warnings, ln)
 
@@ -266,6 +269,7 @@ class Template:
                                                                    comment_uid=comment[c_user_id],
                                                                    date_creation=comment[c_date_creation],
                                                                    body=comment[c_body],
+                                                                   body_format=comment[c_body_format],
                                                                    status='', nb_reports=0,
                                                                    nb_votes_total=comment[c_nb_votes_total],
                                                                    nb_votes_yes=comment[c_nb_votes_yes],
@@ -342,7 +346,7 @@ class Template:
                            write_button_form)
         return out
 
-    def tmpl_get_comment_without_ranking(self, req, ln, nickname, comment_uid, date_creation, body, status, nb_reports, reply_link=None, report_link=None, undelete_link=None, delete_links=None, unreport_link=None, recID=-1, com_id='', attached_files=None, collapsed_p=False):
+    def tmpl_get_comment_without_ranking(self, req, ln, nickname, comment_uid, date_creation, body, body_format, status, nb_reports, reply_link=None, report_link=None, undelete_link=None, delete_links=None, unreport_link=None, recID=-1, com_id='', attached_files=None, collapsed_p=False):
         """
         private function
         @param req: request object to fetch user info
@@ -374,8 +378,12 @@ class Template:
         if attached_files is None:
             attached_files = []
         out = ''
-        final_body = body
-        #final_body = email_quoted_txt2html(body)
+
+        if body_format == "text":
+            final_body = email_quoted_txt2html(body,indent_html=("<blockquote>","</blockquote>"),wash_p=False)
+        else:
+            final_body = body
+
         title = nickname
         title += '<a name="C%s" id="C%s"></a>' % (com_id, com_id)
         links = ''
@@ -457,9 +465,9 @@ class Template:
             <a class="webcomment_permalink" title="Permalink to this comment" href="#C%(comid)i">¶</a>
         </div>
         <div class="collapsible_content" id="collapsible_content_%(comid)i" style="%(collapsible_content_style)s">
-            <blockquote>
+            <div class="commentbox2">
         %(body)s
-            </blockquote>
+            </div>
         %(attached_files_html)s
 
         <div class="webcomment_comment_options">%(links)s</div>
@@ -480,7 +488,7 @@ class Template:
                  }
         return out
 
-    def tmpl_get_comment_with_ranking(self, req, ln, nickname, comment_uid, date_creation, body, status, nb_reports, nb_votes_total, nb_votes_yes, star_score, title, report_link=None, delete_links=None, undelete_link=None, unreport_link=None, recID=-1):
+    def tmpl_get_comment_with_ranking(self, req, ln, nickname, comment_uid, date_creation, body, body_format, status, nb_reports, nb_votes_total, nb_votes_yes, star_score, title, report_link=None, delete_links=None, undelete_link=None, unreport_link=None, recID=-1):
         """
         private function
         @param req: request object to fetch user info
@@ -512,6 +520,12 @@ class Template:
 
         out = ""
 
+
+        if body_format == "text":
+            final_body = email_quoted_txt2html(body,indent_html=("<blockquote>","</blockquote>"),wash_p=False)
+        else:
+            final_body = body
+
         date_creation = convert_datetext_to_dategui(date_creation, ln=ln)
         reviewed_label = _("Reviewed by %(x_nickname)s on %(x_date)s") % {'x_nickname': nickname, 'x_date':date_creation}
         ## FIX
@@ -523,9 +537,9 @@ class Template:
         _body = ''
         if body != '':
              _body = '''
-      <blockquote>
+      <div class="commentbox2">
 %s
-      </blockquote>''' % body
+      </div>''' % final_body
 
 
 #            _body = '''
@@ -665,7 +679,8 @@ class Template:
             c_round_name = 11
             c_restriction = 12
             reply_to = 13
-            c_visibility = 14
+            c_body_format = 14
+            c_visibility = 15
             discussion = 'reviews'
             comments_link = '<a href="%s/%s/%s/comments/">%s</a> (%i)' % (CFG_SITE_URL, CFG_SITE_RECORD, recID, _('Comments'), total_nb_comments)
             reviews_link = '<b>%s (%i)</b>' % (_('Reviews'), total_nb_reviews)
@@ -681,7 +696,8 @@ class Template:
             c_round_name = 7
             c_restriction = 8
             reply_to = 9
-            c_visibility = 10
+            c_body_format = 10
+            c_visibility = 11
             discussion = 'comments'
             comments_link = '<b>%s (%i)</b>' % (_('Comments'), total_nb_comments)
             reviews_link = '<a href="%s/%s/%s/reviews/">%s</a> (%i)' % (CFG_SITE_URL, CFG_SITE_RECORD, recID, _('Reviews'), total_nb_reviews)
@@ -838,14 +854,14 @@ class Template:
                     delete_links['auth'] = "%s/admin/webcomment/webcommentadmin.py/del_single_com_auth?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     undelete_link = "%s/admin/webcomment/webcommentadmin.py/undel_com?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     unreport_link = "%s/admin/webcomment/webcommentadmin.py/unreport_com?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
-                    comments_rows += self.tmpl_get_comment_without_ranking(req, ln, messaging_link, comment[c_user_id], comment[c_date_creation], comment[c_body], comment[c_status], comment[c_nb_reports], reply_link, report_link, undelete_link, delete_links, unreport_link, recID, comment[c_id], files, comment[c_visibility])
+                    comments_rows += self.tmpl_get_comment_without_ranking(req, ln, messaging_link, comment[c_user_id], comment[c_date_creation], comment[c_body], comment[c_body_format], comment[c_status], comment[c_nb_reports], reply_link, report_link, undelete_link, delete_links, unreport_link, recID, comment[c_id], files, comment[c_visibility])
                 else:
                     report_link = '%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/reviews/report?ln=%(ln)s&amp;comid=%%(comid)s&amp;do=%(do)s&amp;ds=%(ds)s&amp;nb=%(nb)s&amp;p=%(p)s&amp;referer=%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/reviews/display' % useful_dict % {'comid': comment[c_id]}
                     delete_links['mod'] = "%s/admin/webcomment/webcommentadmin.py/del_single_com_mod?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     delete_links['auth'] = "%s/admin/webcomment/webcommentadmin.py/del_single_com_auth?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     undelete_link = "%s/admin/webcomment/webcommentadmin.py/undel_com?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     unreport_link = "%s/admin/webcomment/webcommentadmin.py/unreport_com?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
-                    comments_rows += self.tmpl_get_comment_with_ranking(req, ln, messaging_link, comment[c_user_id], comment[c_date_creation], comment[c_body], comment[c_status], comment[c_nb_reports], comment[c_nb_votes_total], comment[c_nb_votes_yes], comment[c_star_score], comment[c_title], report_link, delete_links, undelete_link, unreport_link, recID)
+                    comments_rows += self.tmpl_get_comment_with_ranking(req, ln, messaging_link, comment[c_user_id], comment[c_date_creation], comment[c_body], comment[c_body_format], comment[c_status], comment[c_nb_reports], comment[c_nb_votes_total], comment[c_nb_votes_yes], comment[c_star_score], comment[c_title], report_link, delete_links, undelete_link, unreport_link, recID)
                     helpful_label = _("Was this review helpful?")
                     report_abuse_label = "(" + _("Report abuse") + ")"
                     yes_no_separator = '<td> / </td>'
@@ -1918,6 +1934,7 @@ class Template:
                                                                    cmt_tuple[1],#userid
                                                                    cmt_tuple[2],#date_creation
                                                                    cmt_tuple[3],#body
+                                                                   cmt_tuple[10],#body_format
                                                                    cmt_tuple[9],#status
                                                                    0,
                                                                    cmt_tuple[5],#nb_votes_total
@@ -1931,6 +1948,7 @@ class Template:
                                                                       cmt_tuple[1],#userid
                                                                       cmt_tuple[2],#date_creation
                                                                       cmt_tuple[3],#body
+                                                                      cmt_tuple[6],#body_format
                                                                       cmt_tuple[5],#status
                                                                       0,
                                                                       None,        #reply_link
@@ -2470,7 +2488,7 @@ class Template:
         last_id_bibrec = None
         nb_record_groups = 0
         out += '<div id="yourcommentsmaincontent">'
-        for id_bibrec, comid, date_creation, body, status, in_reply_to_id_cmtRECORDCOMMENT in comments:
+        for id_bibrec, comid, date_creation, body, body_format, status, in_reply_to_id_cmtRECORDCOMMENT in comments:
             if last_id_bibrec != id_bibrec and selected_display_format_option in ('rc', 'ro'):
                 # We moved to another record. Show some info about
                 # current record.
@@ -2489,7 +2507,11 @@ class Template:
                 <div class="yourcommentsrecordgroup%(recid)sheader">&#149; ''' % {'recid': id_bibrec} + \
                        record_info_html + '</div><div style="padding-left: 20px;">'
             if selected_display_format_option != 'ro':
-                final_body = body
+
+                if body_format == "text":
+                    final_body = email_quoted_txt2html(body,indent_html=("<blockquote>","</blockquote>"),wash_p=False)
+                else:
+                    final_body = body
                 #final_body = email_quoted_txt2html(body)
                 title = '<a name="C%s" id="C%s"></a>' % (comid, comid)
                 if status == "dm":
@@ -2519,9 +2541,9 @@ class Template:
                     <a class="webcomment_permalink" title="Permalink to this comment" href="#C%(comid)i">¶</a>
                 </div>
                 <div class="collapsible_content">
-                    <blockquote>
+                    <div class="commentbox2">
                 %(body)s
-                    </blockquote>
+                    </div>
                 <div class="webcomment_comment_options">%(links)s</div>
                 </div>
                 <div class="clearer"></div>

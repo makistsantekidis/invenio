@@ -31,7 +31,8 @@ def email_quoted_txt2html(text,
                           linebreak_txt="\n",
                           indent_html=('<div class="commentbox">', "</div>"),
                           linebreak_html='<br/>',
-                          indent_block=True):
+                          indent_block=True,
+                          wash_p=True):
     """
     Takes a typical mail quoted text, e.g.::
         hello,
@@ -119,7 +120,10 @@ def email_quoted_txt2html(text,
         else:
             final_body += tabs_before*"\t" + new_nb_indent * indent_html[0]
         try:
-            line = washer.wash(line)
+            if wash_p:
+                line = washer.wash(line)
+            else:
+                line = cgi.escape(line)
         except HTMLParseError:
             # Line contained something like "foo<bar"
             line = cgi.escape(line)
@@ -172,7 +176,7 @@ def email_quote_txt(text,
         text += indent_txt + line + linebreak_output
     return text
 
-def escape_email_quoted_text(text, indent_txt='>>', linebreak_txt='\n'):
+def escape_email_quoted_text(text, indent_txt='>>', linebreak_txt='\n', wash_p = True):
     """
     Escape text using an email-like indenting rule.
     As an example, this text::
@@ -207,6 +211,10 @@ def escape_email_quoted_text(text, indent_txt='>>', linebreak_txt='\n'):
                 line = line[len(indent_txt):]
             else:
                 break
-        output += (nb_indent * indent_txt) + washer.wash(line, render_unallowed_tags=True) + linebreak_txt
+        if wash_p:
+            output += (nb_indent * indent_txt) + washer.wash(line, render_unallowed_tags=True) + linebreak_txt
+        else:
+            output += (nb_indent * indent_txt) + cgi.escape(line) + linebreak_txt
+
         nb_indent = 0
     return output[:-1]
