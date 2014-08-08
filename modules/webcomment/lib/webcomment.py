@@ -1755,7 +1755,10 @@ def perform_request_add_comment_or_remark(recID=0,
                         # 2 For textarea input
                         textual_msg += "\n\n"
                         if comment[4] == "html":
-                            textual_msg += html2text.html2text(comment[3]).replace(">",">>")
+                            replace_pattern = re.compile("^(>+)")
+                            text_from_html = html2text.html2text(comment[3])
+                            for line in text_from_html.splitlines():
+                                textual_msg += replace_pattern.sub(r"\1"*2,line) + '\n'
                         elif comment[4] == "text":
                             textual_msg += email_quote_txt(text=comment[3])
                         textual_msg += "\n\n"
