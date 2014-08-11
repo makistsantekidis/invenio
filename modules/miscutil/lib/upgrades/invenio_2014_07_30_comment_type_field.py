@@ -19,7 +19,7 @@
 
 
 from invenio.dbquery import run_sql
-
+from invenio.webmessage_mailutils import email_quoted_txt2html
 
 depends_on = ['invenio_2013_10_18_new_index_filetype']
 
@@ -32,9 +32,30 @@ def do_upgrade():
 
 
 def do_upgrade_atlantis():
+    batch_size = 1000
+
     run_sql("""ALTER TABLE cmtRECORDCOMMENT
-               ADD body_format VARCHAR(30) DEFAULT 'html'
+               ADD body_format VARCHAR(30) DEFAULT 'text'
                AFTER body;""")
+    count = run_sql("""SELECT COUNT(*)
+                       FROM cmtRECORDCOMMENT""")[0][0]
+
+    c_id,c_body,c_body_format = 0,1,2
+    select_query = """ SELECT id,body,body_format
+                FROM cmtRECORDCOMMENT
+                limit %s,%s"""
+
+    update_query = """ UPDATE cmtRECORDCOMMENT
+                    SET body_format = "html", body = "%s"
+                    WHERE id = %s"""
+
+    for i in xrange(0,int(count/batch_size)+1):
+        comments = run_sql(select_query,(i*batch_size,(i+1)*batch_size))
+        for comment in comments:
+            if body_format == "text":
+                comment[c_body] = email_quoted_txt2html(comment[c_body])
+                run_sql(update_query,(comment[c_body],comment[c_id]))
+
 
 def estimate():
     return 1
