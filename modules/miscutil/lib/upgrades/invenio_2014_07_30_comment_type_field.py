@@ -53,7 +53,7 @@ def do_upgrade_atlantis():
         comments = run_sql(select_query,(i*batch_size,(i+1)*batch_size))
         for comment in comments:
             if body_format == "text":
-                comment[c_body] = email_quoted_txt2html(comment[c_body])
+                comment[c_body] = email_quoted_txt2html(comment[c_body],indent_html=("<blockquote>","</blockquote>"))
                 run_sql(update_query,(comment[c_body],comment[c_id]))
 
 
