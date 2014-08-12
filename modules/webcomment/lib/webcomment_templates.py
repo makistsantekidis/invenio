@@ -23,6 +23,9 @@
 __revision__ = "$Id$"
 
 import cgi
+import re
+from html2text import html2text
+
 
 # Invenio imports
 from invenio.webcomment_config import CFG_WEBCOMMENT_BODY_FORMATS, \
@@ -54,6 +57,7 @@ from invenio.bibformat import format_record
 from invenio.access_control_engine import acc_authorize_action
 from invenio.access_control_admin import acc_get_user_roles_from_user_info, acc_get_role_id
 from invenio.search_engine_utils import get_fieldvalues
+
 
 class Template:
     """templating class, refer to webcomment.py for examples of call"""
@@ -2643,6 +2647,7 @@ class Template:
                     pass
 
                 elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["CKEDITOR"]:
+                    body = cgi.escape(body)
                     pass
 
                 else:
@@ -2652,12 +2657,10 @@ class Template:
 
                 if output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["TEXTAREA"]:
                     # TODO: Is there a need for cgi.escape() here?
-                    body = html2text.html2text(body)
-                    # html2text returns a single ">" by default, so let's double them.
+                    body = html2text(body)
                     body = re.sub("^(>+)", r"\1" * 2, body, count=0, flags=re.M)
-
                 elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]:
-                    body = html2text.html2text(body)
+                    body = html2text(body)
 
                 else:
                     pass
@@ -2689,15 +2692,14 @@ class Template:
                         indent_html=("<blockquote>", "</blockquote>"),
                         wash_p=False
                     )
-
+                    body = cgi.escape(body)
                 else:
                     pass
 
             elif output_format in CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"].values():
 
                 if output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["TEXTAREA"]:
-                    # TODO: Is there a need for cgi.escape() here?
-                    pass
+                    body = cgi.escape(body)
 
                 elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]:
                     pass
