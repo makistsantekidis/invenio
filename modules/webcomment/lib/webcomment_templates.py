@@ -928,9 +928,26 @@ class Template:
         elif reviews == 1 and total_nb_reviews == 0 and can_send_comments:
             review_or_comment_first = _("Be the first to review this document.") + '<br />'
 
+        from invenio.search_engine_utils import get_fieldvalues
+        from datetime import datetime
+        deadline = ''
+
+        if CFG_CERN_SITE and get_fieldvalues(recID,'980__a')[0] == "ATLASPUBDRAFT":
+            deadline = get_fieldvalues(recID,'925__b') or ''
+            if deadline:
+                deadline = datetime.strptime(deadline[0],"%d %m %Y")
+                time_left = deadline - datetime.now()
+                if time_left.total_seconds() > 0:
+                    deadline = "Deadline is in %s days and %s hours, which is on %s" \
+                            % (str(time_left.days),str(time_left.seconds/3600),str(deadline.strftime("%d/%m/%Y")))
+                else:
+                    deadline = "Deadline was %s days and %s hours ago, on %s" \
+                            % (str(time_left.days)[1:],str(time_left.seconds/3600),str(deadline.strftime("%d/%m/%Y")))
+                deadline = """<div style="color: red;" >%s</div>""" % deadline
         # do NOT remove the HTML comments below. Used for parsing
         body = '''
 %(comments_and_review_tabs)s
+%(deadline_notification)s
 <!-- start comments table -->
 <div class="webcomment_comment_table">
   %(comments_rows)s
@@ -957,7 +974,8 @@ class Template:
                                        CFG_WEBCOMMENT_ALLOW_COMMENTS and \
                                        '%s | %s <br />' % \
                                        (comments_link, reviews_link) or '',
-            'review_or_comment_first'   : review_or_comment_first
+            'review_or_comment_first'   : review_or_comment_first,
+            'deadline_notification' : deadline
         }
 
         # form is not currently used. reserved for an eventual purpose
