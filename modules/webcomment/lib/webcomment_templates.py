@@ -928,16 +928,36 @@ class Template:
         elif reviews == 1 and total_nb_reviews == 0 and can_send_comments:
             review_or_comment_first = _("Be the first to review this document.") + '<br />'
 
+
+        subscription_element = ''
+        if reviews == 0:
+            if not user_is_subscribed_to_discussion:
+                subscription_element = '<div class="comment-subscribe">' + '<img src="%s/img/mail-icon-12x8.gif" border="0" alt="" />' % CFG_SITE_URL + \
+                        '&nbsp;' + '<b>' + create_html_link(urlbase=CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + \
+                                                            str(recID) + '/comments/subscribe',
+                                                            urlargd={},
+                                                            link_label=_('Subscribe')) + \
+                        '</b>' + ' to this discussion. You will then receive all new comments by email.' + '</div>'
+            elif user_can_unsubscribe_from_discussion:
+                subscription_element = '<div class="comment-subscribe">' + '<img src="%s/img/mail-icon-12x8.gif" border="0" alt="" />' % CFG_SITE_URL + \
+                        '&nbsp;' + '<b>' + create_html_link(urlbase=CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + \
+                                                            str(recID) + '/comments/unsubscribe',
+                                                            urlargd={},
+                                                            link_label=_('Unsubscribe')) + \
+                        '</b>' + ' from this discussion. You will no longer receive emails about new comments.' + '</div>'
+            subscription_element = '<br />%s<br />' % subscription_element
+
         # do NOT remove the HTML comments below. Used for parsing
         body = '''
 %(comments_and_review_tabs)s
 <!-- start comments table -->
+%(subscription_element)s
 <div class="webcomment_comment_table">
   %(comments_rows)s
 </div>
 <!-- end comments table -->
 %(review_or_comment_first)s
-<br />''' % \
+<br />%(subscription_element)s''' % \
         {   'record_label': _("Record"),
             'back_label': _("Back to search results"),
             'total_label': total_label,
@@ -957,7 +977,8 @@ class Template:
                                        CFG_WEBCOMMENT_ALLOW_COMMENTS and \
                                        '%s | %s <br />' % \
                                        (comments_link, reviews_link) or '',
-            'review_or_comment_first'   : review_or_comment_first
+            'review_or_comment_first'   : review_or_comment_first,
+            'subscription_element' : subscription_element
         }
 
         # form is not currently used. reserved for an eventual purpose
@@ -1013,24 +1034,6 @@ class Template:
             body = warnings + body + pages
         else:
             body = warnings + body
-
-        if reviews == 0:
-            if not user_is_subscribed_to_discussion:
-                body += '<div class="comment-subscribe">' + '<img src="%s/img/mail-icon-12x8.gif" border="0" alt="" />' % CFG_SITE_URL + \
-                        '&nbsp;' + '<b>' + create_html_link(urlbase=CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + \
-                                                            str(recID) + '/comments/subscribe',
-                                                            urlargd={},
-                                                            link_label=_('Subscribe')) + \
-                        '</b>' + ' to this discussion. You will then receive all new comments by email.' + '</div>'
-                body += '<br />'
-            elif user_can_unsubscribe_from_discussion:
-                body += '<div class="comment-subscribe">' + '<img src="%s/img/mail-icon-12x8.gif" border="0" alt="" />' % CFG_SITE_URL + \
-                        '&nbsp;' + '<b>' + create_html_link(urlbase=CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + \
-                                                            str(recID) + '/comments/unsubscribe',
-                                                            urlargd={},
-                                                            link_label=_('Unsubscribe')) + \
-                        '</b>' + ' from this discussion. You will no longer receive emails about new comments.' + '</div>'
-                body += '<br />'
 
         if can_send_comments:
             body += add_comment_or_review
