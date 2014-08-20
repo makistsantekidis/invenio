@@ -19,6 +19,7 @@
 
 """ Comments and reviews for records """
 
+
 __revision__ = "$Id$"
 
 # non Invenio imports:
@@ -83,6 +84,8 @@ from invenio.search_engine import \
      get_collection_reclist, \
      get_colID
 from invenio.search_engine_utils import get_fieldvalues
+from invenio.webcomment_washer import EmailWasher
+from invenio.webcomment_dblayer import add_comment_to_file_association
 try:
     import invenio.template
     webcomment_templates = invenio.template.load('webcomment')
@@ -931,7 +934,8 @@ def get_reply_order_cache_data(comid):
 def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
                                 note="", score=0, priority=0,
                                 client_ip_address='', editor_type='textarea',
-                                req=None, reply_to=None, attached_files=None):
+                                req=None, reply_to=None, attached_files=None,
+                                associated_file=None):
     """
     Private function
     Insert a comment/review or remarkinto the database
@@ -944,6 +948,8 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
     @param editor_type: the kind of editor used to submit the comment: 'textarea', 'ckeditor'
     @param req: request object. If provided, email notification are sent after we reply to user request.
     @param reply_to: the id of the comment we are replying to with this inserted comment.
+    @param associated_file: dictionary containing all the information about the association of the comment being
+                                    submitted to the bibdocfile that was chosen. ("id_bibdoc:version:mime")
     @return: integer >0 representing id if successful, integer 0 if not
     """
 
@@ -1011,6 +1017,16 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
     if res:
         new_comid = int(res)
         move_attached_files_to_storage(attached_files, recID, new_comid)
+        if associated_file:
+            with open('/tmp/pqpqpqpq','a') as fp:
+                fp.write(associated_file)
+            id_bibdoc, doc_version, doc_mime = associated_file.split(":")
+
+            add_comment_to_file_association(recID, new_comid, id_bibdoc, doc_version, doc_mime)
+        ## Associate comment with a bibdocfile if one was chosen
+
+
+
         parent_reply_order = run_sql("""SELECT reply_order_cached_data from cmtRECORDCOMMENT where id=%s""", (reply_to,))
         if not parent_reply_order or parent_reply_order[0][0] is None:
             # This is not a reply, but a first 0-level comment
@@ -1635,7 +1651,8 @@ def perform_request_add_comment_or_remark(recID=0,
                                           subscribe=False,
                                           req=None,
                                           attached_files=None,
-                                          warnings=None):
+                                          warnings=None,
+                                          associated_file=None):
     """
     Add a comment/review or remark
     @param recID: record id
@@ -1813,7 +1830,8 @@ def perform_request_add_comment_or_remark(recID=0,
                                                           client_ip_address=client_ip_address,
                                                           editor_type=editor_type,
                                                           req=req,
-                                                          reply_to=comID)
+                                                          reply_to=comID,
+                                                          associated_file=associated_file)
                 else:
                     try:
                         raise InvenioWebCommentWarning(_('You already wrote a review for this record.'))
@@ -1829,8 +1847,9 @@ def perform_request_add_comment_or_remark(recID=0,
                                                           client_ip_address=client_ip_address,
                                                           editor_type=editor_type,
                                                           req=req,
-
-                                                          reply_to=comID, attached_files=attached_files)
+                                                          reply_to=comID,
+                                                          attached_files=attached_files,
+                                                          associated_file=associated_file)
                     if success > 0 and subscribe:
                         subscribe_user_to_discussion(recID, uid)
                 else:

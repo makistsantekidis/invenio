@@ -62,6 +62,7 @@ from invenio.bibformat import format_record
 from invenio.access_control_engine import acc_authorize_action
 from invenio.access_control_admin import acc_get_user_roles_from_user_info, acc_get_role_id
 from invenio.search_engine_utils import get_fieldvalues
+from invenio.webcomment_dblayer import get_bibdocfiles_of_record
 
 class Template:
     """templating class, refer to webcomment.py for examples of call"""
@@ -1320,6 +1321,7 @@ class Template:
 
 %(editor)s
 <br />
+%(associated_file_selector_interface)s
 %(simple_attach_file_interface)s
                   <span class="reportabuse">%(note)s</span>
                   <div class="submit-area">
@@ -1335,11 +1337,12 @@ class Template:
                        'editor': editor,
                        'subscribe_to_discussion': subscribe_to_discussion,
                        'reply_to': reply_to and '<input type="hidden" name="comid" value="%s"/>' % reply_to or '',
-                       'simple_attach_file_interface': simple_attach_file_interface}
+                       'simple_attach_file_interface': simple_attach_file_interface,
+                       'associated_file_selector_interface': self.tmpl_bibdocfile_selector_element(recID)}
         form_link = "%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/comments/%(function)s?%(arguments)s" % link_dic
         form = self.create_write_comment_hiddenform(action=form_link, method="post", text=form, button='Add comment',
                                                     enctype='multipart/form-data', form_id='cmtForm',
-                                                    form_name='cmtForm')
+                                                    form_name='cmtForm', associated_file='')
 
         return warnings + form + self.tmpl_page_do_not_leave_comment_page_js(ln=ln)
 
@@ -2779,6 +2782,53 @@ class Template:
 
         return filter_element
 
+    def tmpl_bibdocfile_selector_element(self, recID):
+        """
+        Creates a selector element for bibdocfiles of a record
+        @param recID: Id of the record
+        """
+        files = get_bibdocfiles_of_record(recID)
+        optgroups_html = ''
+        optgroups = {}
+
+        ## group files in a dictionary using the file name as a key
+        for file in files:
+            if not optgroups.get(file['docname']):
+                optgroups[file['docname']] =[]
+            optgroups[file['docname']].append(file)
+
+        ## construct the optgroups to be displayed
+        for key, values in optgroups.iteritems():
+            optgroups_html += """<optgroup label="%s">""" % key
+            for value in values:
+                optgroups_html += \
+                """<option value="%(bibdocfileID)s:%(version)s:%(mime)s">Version %(version)s, Mime %(mime)s</option>""" \
+                                  % {'version': value['version'],
+                                     'mime': value['mime'],
+                                     'bibdocfileID': value['id_bibdoc']
+                                    }
+            optgroups_html += "</optgroup>"
+
+        file_selection_element = """
+        <div style="float:right">
+            <select id="file_selector">
+              %s
+            </select>
+        </div>
+        <script>
+        $(function(){
+             $("#file_selector").change(function() {
+                 $('input[name="associated_file"]').attr('value',$( "#file_selector option:selected" ).attr('value'));
+              });
+        $( "#file_selector option:selected" ).text();
+        });
+        </script>
+        <div style="clear:both"></div>
+        """ % optgroups_html
+        
+        return file_selection_element  
+    
+    
     def tmpl_prepare_comment_body(self, body, body_format, output_format):
         """
         Prepares the comment's body according to the desired format
@@ -2956,3 +3006,6 @@ class Template:
             body = cgi.escape(body)
 
         return body
+
+    
+    
