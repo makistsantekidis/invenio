@@ -19,6 +19,7 @@
 
 from invenio.dbquery import run_sql
 from invenio.webcomment_config import CFG_WEBCOMMENT_BODY_FORMATS
+from invenio.webmessage_mailutils import email_quoted_txt2html
 
 depends_on = ['invenio_release_1_1_0']
 
@@ -29,8 +30,10 @@ def do_upgrade():
 
     # First, insert the new column in the table.
     run_sql("""ALTER TABLE  cmtRECORDCOMMENT
-               ADD COLUMN   body_format VARCHAR(30) NOT NULL DEFAULT %s
-               AFTER        body;""", (CFG_WEBCOMMENT_BODY_FORMATS["HTML"],))
+               ADD COLUMN   body_format VARCHAR(10) NOT NULL DEFAULT %s
+               AFTER        body;""",
+            (CFG_WEBCOMMENT_BODY_FORMATS["HTML"],)
+           )
 
     number_of_comments = run_sql("""SELECT  COUNT(id)
                                     FROM    cmtRECORDCOMMENT""")[0][0]
@@ -56,7 +59,7 @@ def do_upgrade():
                                     LIMIT   %s, %s"""
 
         comments_update_query = """ UPDATE  cmtRECORDCOMMENT
-                                    SET     body = %s,
+                                    SET     body = %s
                                     WHERE   id = %s"""
 
         for number_of_select_iteration in xrange(number_of_select_iterations):

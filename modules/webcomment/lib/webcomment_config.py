@@ -38,8 +38,8 @@ CFG_WEBCOMMENT_BODY_FORMATS = {
 
 CFG_WEBCOMMENT_OUTPUT_FORMATS = {
     "HTML" : {
-        "WEB" : "WEB",
-        "EMAIL" : "HTML_EMAIL",
+        "WEB"      : "WEB",
+        "EMAIL"    : "HTML_EMAIL",
         "CKEDITOR" : "CKEDITOR",
     },
     "TEXT" : {

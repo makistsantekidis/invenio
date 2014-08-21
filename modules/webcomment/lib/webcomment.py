@@ -28,32 +28,35 @@ import os
 import shutil
 import cgi
 import re
-import html2text
 from datetime import datetime, timedelta
 
 # Invenio imports:
 
 from invenio.dbquery import run_sql
-from invenio.config import CFG_PREFIX, \
-     CFG_SITE_LANG, \
-     CFG_WEBALERT_ALERT_ENGINE_EMAIL,\
-     CFG_SITE_SUPPORT_EMAIL,\
-     CFG_WEBCOMMENT_ALERT_ENGINE_EMAIL,\
-     CFG_SITE_URL,\
-     CFG_SITE_NAME,\
-     CFG_WEBCOMMENT_ALLOW_REVIEWS,\
-     CFG_WEBCOMMENT_ALLOW_SHORT_REVIEWS,\
-     CFG_WEBCOMMENT_ALLOW_COMMENTS,\
-     CFG_WEBCOMMENT_ADMIN_NOTIFICATION_LEVEL,\
-     CFG_WEBCOMMENT_NB_REPORTS_BEFORE_SEND_EMAIL_TO_ADMIN,\
-     CFG_WEBCOMMENT_TIMELIMIT_PROCESSING_COMMENTS_IN_SECONDS,\
-     CFG_WEBCOMMENT_DEFAULT_MODERATOR, \
-     CFG_SITE_RECORD, \
-     CFG_WEBCOMMENT_EMAIL_REPLIES_TO, \
-     CFG_WEBCOMMENT_ROUND_DATAFIELD, \
-     CFG_WEBCOMMENT_RESTRICTION_DATAFIELD, \
-     CFG_WEBCOMMENT_MAX_COMMENT_THREAD_DEPTH, \
-     CFG_WEBCOMMENT_ENABLE_HTML_EMAILS
+from invenio.config import \
+    CFG_PREFIX, \
+    CFG_SITE_LANG, \
+    CFG_WEBALERT_ALERT_ENGINE_EMAIL,\
+    CFG_SITE_SUPPORT_EMAIL,\
+    CFG_WEBCOMMENT_ALERT_ENGINE_EMAIL,\
+    CFG_SITE_URL,\
+    CFG_SITE_SECURE_URL,\
+    CFG_SITE_NAME,\
+    CFG_WEBCOMMENT_ALLOW_REVIEWS,\
+    CFG_WEBCOMMENT_ALLOW_SHORT_REVIEWS,\
+    CFG_WEBCOMMENT_ALLOW_COMMENTS,\
+    CFG_WEBCOMMENT_ADMIN_NOTIFICATION_LEVEL,\
+    CFG_WEBCOMMENT_NB_REPORTS_BEFORE_SEND_EMAIL_TO_ADMIN,\
+    CFG_WEBCOMMENT_TIMELIMIT_PROCESSING_COMMENTS_IN_SECONDS,\
+    CFG_WEBCOMMENT_DEFAULT_MODERATOR, \
+    CFG_SITE_RECORD, \
+    CFG_WEBCOMMENT_EMAIL_REPLIES_TO, \
+    CFG_WEBCOMMENT_ROUND_DATAFIELD, \
+    CFG_WEBCOMMENT_RESTRICTION_DATAFIELD, \
+    CFG_WEBCOMMENT_MAX_COMMENT_THREAD_DEPTH, \
+    CFG_WEBCOMMENT_ENABLE_HTML_EMAILS, \
+    CFG_WEBCOMMENT_USE_RICH_TEXT_EDITOR, \
+    CFG_WEBCOMMENT_ENABLE_MARKDOWN_TEXT_RENDERING
 from invenio.webmessage_mailutils import email_quote_txt
 from invenio.htmlutils import tidy_html, HTMLWasher
 from invenio.webuser import get_user_info, get_email, collect_user_info
@@ -506,7 +509,9 @@ Comment:    comment_id      = %(cmt_id)s
             %(review_stuff)s
             body            =
 ---start body---
+
 %(cmt_body)s
+
 ---end body---
 
 Please go to the record page %(comment_admin_link)s to delete this message if necessary. A warning will be sent to the user in question.''' % \
@@ -525,7 +530,7 @@ Please go to the record page %(comment_admin_link)s to delete this message if ne
                     'cmt_reported'          : cmt_reported,
                     'review_stuff'          : CFG_WEBCOMMENT_ALLOW_REVIEWS and \
                                               "star score\t= %s\n\treview title\t= %s" % (cmt_star, cmt_title) or "",
-                    'cmt_body'              : webcomment_templates.tmpl_prepare_body_according_to_format(cmt_body, cmt_body_format, CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["EMAIL"]),
+                    'cmt_body'              : webcomment_templates.tmpl_prepare_comment_body(cmt_body, cmt_body_format, CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["EMAIL"]),
                     'comment_admin_link'    : CFG_SITE_URL + "/"+ CFG_SITE_RECORD +"/" + str(id_bibrec) + '/comments#' + str(cmt_id),
                     'user_admin_link'       : "user_admin_link" #! FIXME
                 }
@@ -536,10 +541,7 @@ Please go to the record page %(comment_admin_link)s to delete this message if ne
         if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
             html_content = """
 <style>
-li {
-  list-style-type: none;
-}
-ul {
+ul.invenio_local {
   list-style-type: none;
 }
 blockquote {
@@ -551,32 +553,34 @@ blockquote {
 The following comment has been reported a total of %(cmt_reported)s times.
 
 <p>Author:</p>
-<ul>
-  <li> nickname = %(nickname)s </li>
-  <li> email    = %(user_email)s </li>
-  <li> user_id  = %(uid)s </li>
-  <li> <p>This user has:</p>
-    <ul>
+<ul class="invenio_local">
+  <li>nickname = %(nickname)s</li>
+  <li>email    = &lt;<a href="mailto:%(user_email)s">%(user_email)s</a>&gt;</li>
+  <li>user_id  = %(uid)s</li>
+  <li><p>This user has:</p>
+    <ul class="invenio_local">
       <li>total number of reports = %(user_nb_abuse_reports)s</li>
-      <li>%(votes)s</li>
+      %(votes)s
     </ul>
 </ul>
 
 <p>Comment:</p>
-<ul>
-  <li> comment_id      = %(cmt_id)s </li>
-  <li> record_id       = %(id_bibrec)s </li>
-  <li> date written    = %(cmt_date)s </li>
-  <li> nb reports      = %(cmt_reported)s </li>
-  <li> %(review_stuff)s </li>
-  <li> body            = </li>
+<ul class="invenio_local">
+  <li>comment_id      = %(cmt_id)s</li>
+  <li>record_id       = %(id_bibrec)s</li>
+  <li>date written    = %(cmt_date)s</li>
+  <li>nb reports      = %(cmt_reported)s</li>
+  %(review_stuff)s
+  <li>body            =</li>
 </ul>
 
-<hr />
-%(cmt_body)s
-<hr />
+&lt;---------------&gt;<br /><br />
 
-<p>Please go to the record page %(comment_admin_link)s to delete this message if necessary.
+%(cmt_body)s
+
+<br />&lt;---------------&gt;<br />
+
+<p>Please go to the record page &lt;<a href="%(comment_admin_link)s">%(comment_admin_link)s</a>&gt; to delete this message if necessary.
    A warning will be sent to the user in question.</p>""" % {
     'cfg-report_max'        : CFG_WEBCOMMENT_NB_REPORTS_BEFORE_SEND_EMAIL_TO_ADMIN,
     'nickname'              : cgi.escape(nickname),
@@ -585,17 +589,17 @@ The following comment has been reported a total of %(cmt_reported)s times.
     'user_nb_abuse_reports' : user_nb_abuse_reports,
     'user_votes'            : user_votes,
     'votes'                 : CFG_WEBCOMMENT_ALLOW_REVIEWS and \
-                              "total number of positive votes\t= %s\n\t\ttotal number of negative votes\t= %s" % \
+                              "<li>total number of positive votes = %s</li>\n<li>total number of negative votes= %s</li>" % \
                                   (user_votes, (user_nb_votes_total - user_votes))
-                                                           or "\n",
+                                                           or "",
     'cmt_id'                : cmt_id,
     'id_bibrec'             : id_bibrec,
     'cmt_date'              : cmt_date,
     'cmt_reported'          : cmt_reported,
     'review_stuff'          : CFG_WEBCOMMENT_ALLOW_REVIEWS and \
-                              "star score\t= %s\n\treview title\t= %s" % (cmt_star, cmt_title)
+                              "<li>star score = %s</li>\n<li>review title = %s</li>" % (cmt_star, cmt_title)
                                                            or "",
-    'cmt_body'              : webcomment_templates.tmpl_prepare_body_according_to_format(cmt_body, cmt_body_format, CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]),
+    'cmt_body'              : webcomment_templates.tmpl_prepare_comment_body(cmt_body, cmt_body_format, CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]),
     'comment_admin_link'    : CFG_SITE_URL + "/"+ CFG_SITE_RECORD +"/" + str(id_bibrec) + '/comments#' + str(cmt_id),
     'user_admin_link'       : "user_admin_link", #! FIXME
 }
@@ -982,7 +986,10 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
         body_format = CFG_WEBCOMMENT_BODY_FORMATS["HTML"]
 
     elif editor_type == "textarea":
-        body_format = CFG_WEBCOMMENT_BODY_FORMATS["TEXT"]
+        if CFG_WEBCOMMENT_ENABLE_MARKDOWN_TEXT_RENDERING:
+            body_format = CFG_WEBCOMMENT_BODY_FORMATS["MARKDOWN"]
+        else:
+            body_format = CFG_WEBCOMMENT_BODY_FORMATS["TEXT"]
 
     else:
         # NOTE: it should really be one of the above 2 types.
@@ -1308,7 +1315,7 @@ def email_subscribers_about_new_comment(recID, reviews, emails1,
             "fromaddr" : fromaddr,
             "toaddr" : toaddr,
             "subject" : subject,
-            "content" : webcomment_templates.tmpl_prepare_body_according_to_format(
+            "content" : webcomment_templates.tmpl_prepare_comment_body(
                 content,
                 body_format,
                 CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["EMAIL"]
@@ -1329,7 +1336,7 @@ def email_subscribers_about_new_comment(recID, reviews, emails1,
                 "html_p" : True,
             })
             kwargs.update({
-                "html_content" : webcomment_templates.tmpl_prepare_body_according_to_format(
+                "html_content" : webcomment_templates.tmpl_prepare_comment_body(
                     content,
                     body_format,
                     CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]
@@ -1732,19 +1739,31 @@ def perform_request_add_comment_or_remark(recID=0,
                         %s
                         </blockquote>
                         <br/>
-                        """ % webcomment_templates.tmpl_prepare_body_according_to_format(
+                        """ % webcomment_templates.tmpl_prepare_comment_body(
                                   comment[3],
                                   comment[4],
                                   CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["CKEDITOR"]
                               )
 
                         textual_msg += "\n\n%s\n" % email_quote_txt(
-                                  webcomment_templates.tmpl_prepare_body_according_to_format(
-                                      comment[3],
-                                      comment[4],
-                                      CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["TEXTAREA"]
-                                  )
-                              )
+                            webcomment_templates.tmpl_prepare_comment_body(
+                                comment[3],
+                                comment[4],
+                                CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["TEXTAREA"]
+                            ),
+                            # TODO: Maybe always use a single ">" for quotations?
+                            indent_txt=">",
+                            # If we are using CKEditor, then we need to escape
+                            # the textual message before passing it to the
+                            # editor. "email_quote_txt" can do that for us.
+                            # Normally, we could check the "editor_type"
+                            # argument that was passed to this function.
+                            # However, it is usually an empty string since
+                            # it is comming from the "add" interface.
+                            # Instead let's directly use the config variable.
+                            #escape_p=(editor_type == "ckeditor")
+                            escape_p=CFG_WEBCOMMENT_USE_RICH_TEXT_EDITOR
+                        )
 
             return webcomment_templates.tmpl_add_comment_form(recID, uid, nickname, ln, msg, warnings, textual_msg, can_attach_files=can_attach_files, reply_to=comID)
 
@@ -1897,9 +1916,11 @@ RECORD CONCERNED:
     %(comment_or_review)s ID    = %(comID)s %(review_stuff)s
     Body        =
 <--------------->
+
 %(body)s
 
 <--------------->
+
 ADMIN OPTIONS:
 To moderate the %(comment_or_review)s go to %(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/%(comments_or_reviews)s/display?%(arguments)s
     ''' % \
@@ -1914,19 +1935,17 @@ To moderate the %(comment_or_review)s go to %(siteurl)s/%(CFG_SITE_RECORD)s/%(re
             'record_details'        : record_info,
             'comID'                 : comID2,
             'review_stuff'          : star_score > 0 and review_stuff or "",
-            'body'                  : webcomment_templates.tmpl_prepare_body_according_to_format(body, body_format, CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["EMAIL"]),
-            'siteurl'               : CFG_SITE_URL,
+            'body'                  : webcomment_templates.tmpl_prepare_comment_body(body, body_format, CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["EMAIL"]),
+            'siteurl'               : CFG_SITE_SECURE_URL,
             'CFG_SITE_RECORD'       : CFG_SITE_RECORD,
             'arguments'             : 'ln=en&do=od#%s' % comID
         }
 
     if CFG_WEBCOMMENT_ENABLE_HTML_EMAILS:
+        record_info = webcomment_templates.tmpl_email_new_comment_admin(id_bibrec, html_p=True)
         html_content = """
 <style>
-li {
-  list-style-type: none;
-}
-ul {
+ul.invenio_local {
   list-style-type: none;
 }
 blockquote {
@@ -1938,32 +1957,31 @@ blockquote {
 The following %(comment_or_review)s has just been posted (%(date)s).
 
 <p>AUTHOR:</p>
-<ul>
+<ul class="invenio_local">
   <li>Nickname    = %(nickname)s</li>
-  <li>Email       = %(email)s</li>
+  <li>Email       = &lt;<a href="mailto:%(email)s">%(email)s</a>&gt;</li>
   <li>User ID     = %(uid)s</li>
 </ul>
 
 <p>RECORD CONCERNED:</p>
-<ul>
+<ul class="invenio_local">
   <li>Record ID   = %(recID)s</li>
-  <li>URL         = <a href='%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/%(comments_or_reviews)s/'>link</a></li>
-  <li>%(record_details)s</li>
+  <li>URL         = &lt;<a href='%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/%(comments_or_reviews)s/'>%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/%(comments_or_reviews)s/</a>&gt;</li>
+  %(record_details)s
 </ul>
 
 <p>%(comment_or_review_caps)s:</p>
-<ul>
+<ul class="invenio_local">
   <li>%(comment_or_review)s ID    = %(comID)s %(review_stuff)s</li>
-  <li>Body of the comment as follows:</li>
+  <li>Body                        = </li>
 </ul>
 
-<hr/>
+&lt;---------------&gt;<br /><br />
 %(body)s
-<hr/>
+<br />&lt;---------------&gt;<br />
 
-ADMIN OPTIONS:
-<br />
-To moderate the %(comment_or_review)s go <a href='%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/%(comments_or_reviews)s/display?%(arguments)s'>here</a>""" % {
+<br />ADMIN OPTIONS:
+<br />To moderate the %(comment_or_review)s go to &lt;<a href='%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/%(comments_or_reviews)s/display?%(arguments)s'>%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/%(comments_or_reviews)s/display?%(arguments)s</a>&gt;""" % {
     'comment_or_review'     : star_score >  0 and 'review' or 'comment',
     'comment_or_review_caps': star_score > 0 and 'REVIEW' or 'COMMENT',
     'comments_or_reviews'   : star_score >  0 and 'reviews' or 'comments',
@@ -1975,8 +1993,8 @@ To moderate the %(comment_or_review)s go <a href='%(siteurl)s/%(CFG_SITE_RECORD)
     'record_details'        : record_info,
     'comID'                 : comID2,
     'review_stuff'          : star_score > 0 and review_stuff or "",
-    'body'                  : webcomment_templates.tmpl_prepare_body_according_to_format(body, body_format, CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]),
-    'siteurl'               : CFG_SITE_URL,
+    'body'                  : webcomment_templates.tmpl_prepare_comment_body(body, body_format, CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]),
+    'siteurl'               : CFG_SITE_SECURE_URL,
     'CFG_SITE_RECORD'       : CFG_SITE_RECORD,
     'arguments'             : 'ln=en&do=od#%s' % comID
 }

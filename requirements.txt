@@ -29,3 +29,4 @@ redis==2.9.0
 nydus==0.10.6
 Cerberus==0.5
 html2text==2014.7.3
+markdown2==2.2.1

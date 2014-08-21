@@ -24,40 +24,45 @@ __revision__ = "$Id$"
 
 import cgi
 import re
-from html2text import html2text
-
+import html2text
+import markdown2
 
 # Invenio imports
-from invenio.webcomment_config import CFG_WEBCOMMENT_BODY_FORMATS, \
-                                      CFG_WEBCOMMENT_OUTPUT_FORMATS
+from invenio.webcomment_config import \
+    CFG_WEBCOMMENT_BODY_FORMATS, \
+    CFG_WEBCOMMENT_OUTPUT_FORMATS
 from invenio.urlutils import create_html_link, create_url
-from invenio.webuser import get_user_info, collect_user_info, isGuestUser, get_email
+from invenio.webuser import get_user_info, \
+                            collect_user_info, \
+                            isGuestUser, \
+                            get_email
 from invenio.dateutils import convert_datetext_to_dategui
 from invenio.webmessage_mailutils import email_quoted_txt2html
-from invenio.config import CFG_SITE_URL, \
-                           CFG_SITE_SECURE_URL, \
-                           CFG_BASE_URL, \
-                           CFG_SITE_LANG, \
-                           CFG_SITE_NAME, \
-                           CFG_SITE_NAME_INTL,\
-                           CFG_SITE_SUPPORT_EMAIL,\
-                           CFG_WEBCOMMENT_ALLOW_REVIEWS, \
-                           CFG_WEBCOMMENT_ALLOW_COMMENTS, \
-                           CFG_WEBCOMMENT_USE_RICH_TEXT_EDITOR, \
-                           CFG_WEBCOMMENT_NB_REPORTS_BEFORE_SEND_EMAIL_TO_ADMIN, \
-                           CFG_WEBCOMMENT_AUTHOR_DELETE_COMMENT_OPTION, \
-                           CFG_CERN_SITE, \
-                           CFG_SITE_RECORD, \
-                           CFG_WEBCOMMENT_MAX_ATTACHED_FILES, \
-                           CFG_WEBCOMMENT_MAX_ATTACHMENT_SIZE, \
-                           CFG_WEBCOMMENT_ENABLE_HTML_EMAILS
+from invenio.config import \
+    CFG_SITE_URL, \
+    CFG_SITE_SECURE_URL, \
+    CFG_BASE_URL, \
+    CFG_SITE_LANG, \
+    CFG_SITE_NAME, \
+    CFG_SITE_NAME_INTL,\
+    CFG_SITE_SUPPORT_EMAIL,\
+    CFG_WEBCOMMENT_ALLOW_REVIEWS, \
+    CFG_WEBCOMMENT_ALLOW_COMMENTS, \
+    CFG_WEBCOMMENT_USE_RICH_TEXT_EDITOR, \
+    CFG_WEBCOMMENT_NB_REPORTS_BEFORE_SEND_EMAIL_TO_ADMIN, \
+    CFG_WEBCOMMENT_AUTHOR_DELETE_COMMENT_OPTION, \
+    CFG_CERN_SITE, \
+    CFG_SITE_RECORD, \
+    CFG_WEBCOMMENT_MAX_ATTACHED_FILES, \
+    CFG_WEBCOMMENT_MAX_ATTACHMENT_SIZE, \
+    CFG_WEBCOMMENT_ENABLE_HTML_EMAILS, \
+    CFG_WEBCOMMENT_ENABLE_MARKDOWN_TEXT_RENDERING
 from invenio.htmlutils import get_html_text_editor, create_html_select
 from invenio.messages import gettext_set_language
 from invenio.bibformat import format_record
 from invenio.access_control_engine import acc_authorize_action
 from invenio.access_control_admin import acc_get_user_roles_from_user_info, acc_get_role_id
 from invenio.search_engine_utils import get_fieldvalues
-
 
 class Template:
     """templating class, refer to webcomment.py for examples of call"""
@@ -385,7 +390,7 @@ class Template:
             attached_files = []
         out = ''
 
-        final_body = self.tmpl_prepare_body_according_to_format(
+        final_body = self.tmpl_prepare_comment_body(
             body,
             body_format,
             CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["WEB"]
@@ -527,7 +532,7 @@ class Template:
 
         out = ""
 
-        final_body = self.tmpl_prepare_body_according_to_format(
+        final_body = self.tmpl_prepare_comment_body(
             body,
             body_format,
             CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["WEB"]
@@ -1240,7 +1245,13 @@ class Template:
                  'x_nickname': ' <br /><i>' + display + '</i>'}
 
         if not CFG_WEBCOMMENT_USE_RICH_TEXT_EDITOR:
-            note +=  '<br />' + '&nbsp;'*10 + cgi.escape('You can use some HTML tags: <a href>, <strong>, <blockquote>, <br />, <p>, <em>, <ul>, <li>, <b>, <i>')
+            if CFG_WEBCOMMENT_ENABLE_MARKDOWN_TEXT_RENDERING:
+                note +=  '<br />' + '&nbsp;'*10 + cgi.escape('You can use Markdown syntax to write your comment.')
+            else:
+                # NOTE: Currently we escape all HTML tags before displaying plain text. Should we go back to this approach?
+                #       To go back to this approach we probably simply have to run email_quoted_text2html with wash_p=True
+                #note +=  '<br />' + '&nbsp;'*10 + cgi.escape('You can use some HTML tags: <a href>, <strong>, <blockquote>, <br />, <p>, <em>, <ul>, <li>, <b>, <i>')
+                pass
         #from invenio.search_engine import print_record
         #record_details = print_record(recID=recID, format='hb', ln=ln)
 
@@ -2228,9 +2239,9 @@ class Template:
                {'CFG_SITE_NAME': CFG_SITE_NAME,
                 'user_nickname': user_info['nickname']}
         if html_p:
-            out += '<br />(<a href="%s">%s</a>)' % (CFG_SITE_URL + '/' + CFG_SITE_RECORD + '/' + str(recID), _("Link to the record page"))
+            out += '<br />(&lt;<a href="%s">%s</a>&gt;)' % (CFG_SITE_SECURE_URL + '/' + CFG_SITE_RECORD + '/' + str(recID), CFG_SITE_URL + '/' + CFG_SITE_RECORD + '/' + str(recID))
         else:
-            out += '\n(<%s>)' % (CFG_SITE_URL + '/' + CFG_SITE_RECORD + '/' + str(recID))
+            out += '\n(<%s>)' % (CFG_SITE_SECURE_URL + '/' + CFG_SITE_RECORD + '/' + str(recID))
 
         out += '\n\n\n'
 
@@ -2272,39 +2283,39 @@ class Template:
         out += '\n'
 
         if html_p:
-            out += _("To post another comment, go to <a href=\"%(x_url)s\">here</a> instead.") % \
-               {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
+            out += _("To post another comment, go to &lt;<a href=\"%(x_url)s\">%(x_url)s</a>&gt; instead.") % \
+               {'x_url': CFG_SITE_SECURE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
                 (reviews and '/reviews' or '/comments') + '/add'}
             out += '<br />'
         else:
             out += _("To post another comment, go to <%(x_url)s> instead.")  % \
-               {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
+               {'x_url': CFG_SITE_SECURE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
                 (reviews and '/reviews' or '/comments') + '/add'}
             out += '\n'
 
         if not reviews:
             if html_p:
-                out += _("To specifically reply to this comment, go <a href=\"%(x_url)s\">here</a>") % \
-                   {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
+                out += _("To specifically reply to this comment, go to &lt;<a href=\"%(x_url)s\">%(x_url)s</a>&gt;") % \
+                   {'x_url': CFG_SITE_SECURE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
                     '/comments/add?action=REPLY&comid=' + str(comID)}
                 out += '<br />'
             else:
                 out += _("To specifically reply to this comment, go to <%(x_url)s>")  % \
-                   {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
+                   {'x_url': CFG_SITE_SECURE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
                     '/comments/add?action=REPLY&comid=' + str(comID)}
                 out += '\n'
 
         if can_unsubscribe:
             if html_p:
-                out += _("To unsubscribe from this discussion, go <a href=\"%(x_url)s\">here</a>") % \
-                   {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
+                out += _("To unsubscribe from this discussion, go to &lt;<a href=\"%(x_url)s\">%(x_url)s</a>&gt;") % \
+                   {'x_url': CFG_SITE_SECURE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
                     '/comments/unsubscribe'}
                 out += '<br />'
-                out += _("For any question, please use <a href=\"mailto:%(CFG_SITE_SUPPORT_EMAIL)s\">%(CFG_SITE_SUPPORT_EMAIL)s</a> ") % \
+                out += _("For any question, please use &lt;<a href=\"mailto:%(CFG_SITE_SUPPORT_EMAIL)s\">%(CFG_SITE_SUPPORT_EMAIL)s</a>&gt;") % \
                {'CFG_SITE_SUPPORT_EMAIL': CFG_SITE_SUPPORT_EMAIL}
             else:
                 out += _("To unsubscribe from this discussion, go to <%(x_url)s>") % \
-                   {'x_url': CFG_SITE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
+                   {'x_url': CFG_SITE_SECURE_URL + '/'+ CFG_SITE_RECORD +'/' + str(recID) + \
                     '/comments/unsubscribe'}
                 out += '\n'
                 out += _("For any question, please use <%(CFG_SITE_SUPPORT_EMAIL)s>") % \
@@ -2315,7 +2326,7 @@ class Template:
 
         return out
 
-    def tmpl_email_new_comment_admin(self, recID):
+    def tmpl_email_new_comment_admin(self, recID, html_p=False):
         """
         Prints the record information used in the email to notify the
         system administrator that a new comment has been posted.
@@ -2336,11 +2347,23 @@ class Template:
         report_nums = ', '.join(report_nums)
         #for rep_num in report_nums:
         #    res_rep_num = res_rep_num + ', ' + rep_num
-        out += "    Title = %s \n" % (title and title[0] or "No Title")
-        out += "    Authors = %s \n" % authors
+        if html_p:
+            out += "<li>Title = %s</li>" % (title and title[0] or "No Title")
+        else:
+            out += "    Title = %s \n" % (title and title[0] or "No Title")
+        if html_p:
+            out += "<li>Authors = %s</li>" % authors
+        else:
+            out += "    Authors = %s \n" % authors
         if dates:
-            out += "    Date = %s \n" % dates[0]
-        out += "    Report number = %s" % report_nums
+            if html_p:
+                out += "<li>Date = %s</li>" % dates[0]
+            else:
+                out += "    Date = %s \n" % dates[0]
+        if html_p:
+            out += "<li>Report number = %s</li>" % report_nums
+        else:
+            out += "    Report number = %s" % report_nums
 
         return  out
 
@@ -2528,7 +2551,7 @@ class Template:
                        record_info_html + '</div><div style="padding-left: 20px;">'
             if selected_display_format_option != 'ro':
 
-                final_body = self.tmpl_prepare_body_according_to_format(
+                final_body = self.tmpl_prepare_comment_body(
                     body,
                     body_format,
                     CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["WEB"]
@@ -2631,7 +2654,7 @@ class Template:
 
         return out
 
-    def tmpl_prepare_body_according_to_format(self, body, body_format, output_format):
+    def tmpl_prepare_comment_body(self, body, body_format, output_format):
         """
         Prepares the comment's body according to the desired format
         """
@@ -2641,76 +2664,158 @@ class Template:
             if output_format in CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"].values():
 
                 if output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["WEB"]:
+                    # Display stuff as it is. It should already be washed.
                     pass
 
                 elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]:
+                    # Display stuff as it is. It should already be washed.
                     pass
 
                 elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["CKEDITOR"]:
+                    # CKEditor needs to have stuff unescaped once more
                     body = cgi.escape(body)
-                    pass
 
                 else:
-                    pass
+                    # Let's always be on the safe side
+                    body = cgi.escape(body)
 
             elif output_format in CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"].values():
 
                 if output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["TEXTAREA"]:
-                    # TODO: Is there a need for cgi.escape() here?
-                    body = html2text(body)
-                    body = re.sub("^(>+)", r"\1" * 2, body, count=0, flags=re.M)
-                elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]:
-                    body = html2text(body)
+                    # Convert HTML to plain text
+                    body = html2text.html2text(body)
+                    # html2text appends 2 unnecessary newlines at the end of the body
+                    if body[-2:] == "\n\n":
+                        body = body[:-2]
+                    # The following doubles ">" at the beginning of each line:
+                    # "> test" --> ">> test", ">>> test" --> ">>>>>> test"
+                    # We currently use single ">" to quote text, so no need
+                    # to use it for now.
+                    #body = re.sub(r"^(>+)", r"\1" * 2, body, count=0, flags=re.M)
+
+                elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["EMAIL"]:
+                    # Convert HTML to plain text
+                    body = html2text.html2text(body)
+                    # html2text appends 2 unnecessary newlines at the end of the body
+                    if body[-2:] == "\n\n":
+                        body = body[:-2]
 
                 else:
-                    pass
+                    # Let's always be on the safe side
+                    body = cgi.escape(body)
 
             else:
-                pass
+                # Let's always be on the safe side
+                body = cgi.escape(body)
 
         elif body_format == CFG_WEBCOMMENT_BODY_FORMATS["TEXT"]:
 
             if output_format in CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"].values():
 
                 if output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["WEB"]:
+                    # Convert plain text to HTML
                     body = email_quoted_txt2html(
                         body,
+                        indent_txt=">",
                         indent_html=("<blockquote>", "</blockquote>"),
                         wash_p=False
                     )
 
                 elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]:
+                    # Convert plain text to HTML
                     body = email_quoted_txt2html(
                         body,
+                        indent_txt=">",
                         indent_html=("<blockquote>", "</blockquote>"),
                         wash_p=False
                     )
 
                 elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["CKEDITOR"]:
+                    # Convert plain text to HTML
                     body = email_quoted_txt2html(
                         body,
+                        indent_txt=">",
                         indent_html=("<blockquote>", "</blockquote>"),
                         wash_p=False
                     )
+                    # CKEditor needs to have stuff unescaped once more
                     body = cgi.escape(body)
+
                 else:
-                    pass
+                    # Let's always be on the safe side
+                    body = cgi.escape(body)
 
             elif output_format in CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"].values():
 
                 if output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["TEXTAREA"]:
-                    body = cgi.escape(body)
+                    # Display stuff as it is. It is escaped before being
+                    # placed in the textarea anyway.
+                    pass
 
-                elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]:
+                elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["EMAIL"]:
+                    # Display stuff as it is.
                     pass
 
                 else:
-                    pass
+                    # Let's always be on the safe side
+                    body = cgi.escape(body)
 
             else:
-                pass
+                # Let's always be on the safe side
+                body = cgi.escape(body)
+
+        elif body_format == CFG_WEBCOMMENT_BODY_FORMATS["MARKDOWN"]:
+
+            if output_format in CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"].values():
+
+                if output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["WEB"]:
+                    # Convert Markdown to HTML
+                    body = markdown2.markdown(
+                        body,
+                        safe_mode="escape"
+                    )
+
+                elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["EMAIL"]:
+                    # Convert Markdown to HTML
+                    body = markdown2.markdown(
+                        body,
+                        safe_mode="escape"
+                    )
+
+                elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["HTML"]["CKEDITOR"]:
+                    # Convert Markdown to HTML
+                    body = markdown2.markdown(
+                        body,
+                        safe_mode="escape"
+                    )
+                    # CKEditor needs to have stuff unescaped once more
+                    body = cgi.escape(body)
+
+                else:
+                    # Let's always be on the safe side
+                    body = cgi.escape(body)
+
+            elif output_format in CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"].values():
+
+                if output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["TEXTAREA"]:
+                    # Display stuff as it is. It is escaped before being
+                    # placed in the textarea anyway.
+                    pass
+
+                elif output_format == CFG_WEBCOMMENT_OUTPUT_FORMATS["TEXT"]["EMAIL"]:
+                    # Display stuff as it is.
+                    pass
+
+                else:
+                    # Let's always be on the safe side
+                    body = cgi.escape(body)
+
+            else:
+                # Let's always be on the safe side
+                body = cgi.escape(body)
 
         else:
-            pass
+            # Let's always be on the safe side
+            body = cgi.escape(body)
 
         return body

@@ -183,7 +183,8 @@ def email_quoted_txt2html(text,
 def email_quote_txt(text,
                     indent_txt='>>',
                     linebreak_input="\n",
-                    linebreak_output="\n"):
+                    linebreak_output="\n",
+                    escape_p=False):
     """
     Takes a text and returns it in a typical mail quoted format, e.g.::
         C'est un lapin, lapin de bois.
@@ -205,15 +206,23 @@ def email_quote_txt(text,
     @param indent_txt: the string used for quoting (default: '>>')
     @param linebreak_input: in the text param, string used for linebreaks
     @param linebreak_output: linebreak used for output
+    @param escape_p: if True, escape the text before returning it
     @return: the text as a quoted string
     """
-    if (text == ""):
-        return ""
-    lines = text.split(linebreak_input)
-    text = ""
-    for line in lines:
-        text += indent_txt + line + linebreak_output
-    return text
+
+    out= ""
+
+    if text:
+
+        lines = text.split(linebreak_input)
+
+        for line in lines:
+            out += indent_txt + line + linebreak_output
+
+        if escape_p:
+            out = cgi.escape(out)
+
+    return out
 
 def escape_email_quoted_text(
         text,
