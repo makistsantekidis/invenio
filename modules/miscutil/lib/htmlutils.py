@@ -573,6 +573,9 @@ def get_html_text_editor(name, id=None, content='', textual_content=None, width=
                             language: '%(ln)s'
                             %(file_upload_script)s
                             });
+        (function(b,c){var $=b.jQuery||b.Cowboy||(b.Cowboy={}),a;$.throttle=a=function(e,f,j,i){var h,d=0;if(typeof f!=="boolean"){i=j;j=f;f=c}function g(){var o=this,m=+new Date()-d,n=arguments;function l(){d=+new Date();j.apply(o,n)}function k(){h=c}if(i&&!h){l()}h&&clearTimeout(h);if(i===c&&m>e){l()}else{if(f!==true){h=setTimeout(i?k:l,i===c?e-m:e)}}}if($.guid){g.guid=j.guid=j.guid||$.guid++}return g};$.debounce=function(d,e,f){return f===c?a(d,e,false):a(d,f,e!==false)}})(this);
+
+        $(function() {
 
         CKEDITOR.on('instanceReady',
           function( evt )
@@ -582,12 +585,13 @@ def get_html_text_editor(name, id=None, content='', textual_content=None, width=
             editor_id = oEditor.id
             editor_name = oEditor.name
             var html_editor = document.getElementById(editor_name + 'htmlvalue');
-            oEditor.setData(html_editor.value);
+            oEditor.setData(html_editor.value );
             var editor_type_field = document.getElementById(editor_name + 'editortype');
             editor_type_field.value = 'ckeditor';
             var writer = oEditor.dataProcessor.writer;
             writer.indentationChars = ''; /*Do not indent source code with tabs*/
             oEditor.resetDirty();
+
             /* Workaround: http://dev.ckeditor.com/ticket/3674 */
              evt.editor.on( 'contentDom', function( ev )
              {
@@ -595,8 +599,31 @@ def get_html_text_editor(name, id=None, content='', textual_content=None, width=
              evt.editor.resetDirty();
              } );
             /* End workaround */
-          })
+            $(".cke_button_blockquote").click(function(ev)
+            {
+                //var selection = CKEDITOR.instances.msg.getSelection();
+                //var bookmarks = selection.createBookmarks2(true);
+                //var ranges = selection.getRanges();
+                //var element = ranges[0].getPreviousNode().getPreviousSourceNode().getPreviousSourceNode().getPreviousSourceNode()
 
+                editor_data = CKEDITOR.instances.msg.getData();
+                editor_data = editor_data.replace(/<\/blockquote>[\s]*<blockquote>/m,"</blockquote><br /><blockquote>");
+                editor_data = editor_data.replace(/<blockquote>([\s])*(<br)([\s])*(\/)?>([\s])*<\/blockquote>/m,"");
+                if (editor_data != CKEDITOR.instances.msg.getData())
+                {
+                    CKEDITOR.instances.msg.setData(editor_data);
+                    CKEDITOR.instances.msg.focus();
+                    
+                    //selection.selectElement(element);
+                    //selection.selectRanges( ranges );
+                    //selection.selectBookmarks( bookmarks );
+
+                }
+            });
+
+            })
+
+         })
         //]]></script>
         ''' % \
           {'textual_content': cgi.escape(textual_content),
