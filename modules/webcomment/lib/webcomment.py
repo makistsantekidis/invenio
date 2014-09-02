@@ -85,7 +85,8 @@ from invenio.search_engine import \
      get_colID
 from invenio.search_engine_utils import get_fieldvalues
 from invenio.webcomment_washer import EmailWasher
-from invenio.webcomment_dblayer import add_comment_to_file_association
+from invenio.webcomment_dblayer import add_comment_to_file_association,\
+                                        get_cmtrecordcomment_to_bibdocfile_association
 try:
     import invenio.template
     webcomment_templates = invenio.template.load('webcomment')
@@ -169,6 +170,11 @@ def perform_request_display_comments_or_remarks(req, recID, display_order='od', 
 
     nb_reviews = get_nb_reviews(recID, count_deleted=False)
     nb_comments = get_nb_comments(recID, count_deleted=False)
+    res_associated_files = get_cmtrecordcomment_to_bibdocfile_association(recID)
+    associated_files = {}
+    if res_associated_files:
+        for associated_file in res_associated_files:
+            associated_files[associated_file['id_comment']] = associated_file
 
     # checking non vital arguemnts - will be set to default if wrong
     #if page <= 0 or page.lower() != 'all':
@@ -315,6 +321,8 @@ def perform_request_display_comments_or_remarks(req, recID, display_order='od', 
             display_comment_rounds.append(grouped_comments[-1][0])
         display_comment_rounds.remove('latest')
 
+
+
     body = webcomment_templates.tmpl_get_comments(req,
                                                   recID,
                                                   ln,
@@ -334,7 +342,8 @@ def perform_request_display_comments_or_remarks(req, recID, display_order='od', 
                                                   user_can_unsubscribe_from_discussion=\
                                                   user_can_unsubscribe_from_discussion,
                                                   display_comment_rounds=display_comment_rounds,
-                                                  filter_for_results=filter_for_results)
+                                                  filter_for_results=filter_for_results,
+                                                  associated_files=associated_files)
     return body
 
 def perform_request_vote(cmt_id, client_ip_address, value, uid=-1):
@@ -1017,14 +1026,11 @@ def query_add_comment_or_remark(reviews=0, recID=0, uid=-1, msg="",
     if res:
         new_comid = int(res)
         move_attached_files_to_storage(attached_files, recID, new_comid)
-        if associated_file:
-            with open('/tmp/pqpqpqpq','a') as fp:
-                fp.write(associated_file)
-            id_bibdoc, doc_version, doc_mime = associated_file.split(":")
 
-            add_comment_to_file_association(recID, new_comid, id_bibdoc, doc_version, doc_mime)
-        ## Associate comment with a bibdocfile if one was chosen
-
+        # Associate comment with a bibdocfile if one was chosen
+        if associated_file and len(associated_file.split(":")) >= 2:
+            id_bibdoc, doc_version = associated_file.split(":")[:2]
+            add_comment_to_file_association(recID, new_comid, id_bibdoc, doc_version)
 
 
         parent_reply_order = run_sql("""SELECT reply_order_cached_data from cmtRECORDCOMMENT where id=%s""", (reply_to,))

@@ -37,17 +37,15 @@ def do_upgrade():
     `id_comment` int(15) unsigned NOT NULL,
     `id_bibdoc` mediumint(9) unsigned NOT NULL,
     `version` tinyint(4) unsigned NOT NULL,
-    `format` varchar(50) NOT NULL,
     KEY `id_record` (`id_record`),
     KEY `id_comment` (`id_comment`),
     KEY `id_bibdoc` (`id_bibdoc`),
     KEY `version` (`version`),
-    KEY `format` (`format`),
     PRIMARY KEY (`id_record`,`id_comment`,`id_bibdoc`,`version`,`format`),
     CONSTRAINT `cmtRECORDCOMMENT_bibdocfile_ibfk_1` FOREIGN KEY (`id_record`) REFERENCES `bibrec` (`id`),
     CONSTRAINT `cmtRECORDCOMMENT_bibdocfile_ibfk_2` FOREIGN KEY (`id_comment`) REFERENCES `cmtRECORDCOMMENT` (`id`),
-    CONSTRAINT `cmtRECORDCOMMENT_bibdocfile_ibfk_3` FOREIGN KEY (`id_bibdoc`,`version`,`format`)
-                                      REFERENCES `bibdocfsinfo` (`id_bibdoc`,`version`,`format`)
+    CONSTRAINT `cmtRECORDCOMMENT_bibdocfile_ibfk_3` FOREIGN KEY (`id_bibdoc`,`version`)
+                                      REFERENCES `bibdocfsinfo` (`id_bibdoc`,`version`)
     ) ENGINE=MyISAM;
     """)
 

@@ -18,6 +18,7 @@
 ## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """HTML Templates for commenting features """
+import json
 
 __revision__ = "$Id$"
 
@@ -357,7 +358,14 @@ class Template:
                            write_button_form)
         return out
 
-    def tmpl_get_comment_without_ranking(self, req, ln, nickname, comment_uid, date_creation, body, body_format, status, nb_reports, reply_link=None, report_link=None, undelete_link=None, delete_links=None, unreport_link=None, recID=-1, com_id='', attached_files=None, collapsed_p=False):
+    def tmpl_get_comment_without_ranking(self, req, ln, nickname, comment_uid,
+                                         date_creation, body, body_format, status,
+                                         nb_reports, reply_link=None,
+                                         report_link=None, undelete_link=None,
+                                         delete_links=None, unreport_link=None,
+                                         recID=-1, com_id='',
+                                         attached_files=None, collapsed_p=False,
+                                         associated_files=None):
         """
         private function
         @param req: request object to fetch user info
@@ -465,6 +473,18 @@ class Template:
                                      'toggle_url': create_url(CFG_SITE_URL + '/' + CFG_SITE_RECORD + '/' + str(recID) + '/comments/toggle', {'comid': com_id, 'ln': ln, 'collapse': collapsed_p and '0' or '1', 'referer': user_info['uri']}),
                                      'collapse_ctr_class': collapsed_p and 'webcomment_collapse_ctr_right' or 'webcomment_collapse_ctr_down',
                                      'collapse_label': collapsed_p and _("Open") or _("Close")}
+        associated_file_element = ''
+        if associated_files and associated_files.get(com_id):
+            file = associated_files[com_id]
+            associated_file_element = """
+             <div class="cmt_file_association" doc_code="%(id_bibdoc)s:%(version)s" style="float:right">
+              This comment is associate with file %(docname)s, version %(version)s
+             </div>
+            """ % {
+                'docname': file['docname'],
+                'version': file['version'],
+                'id_bibdoc': file['id_bibdoc']
+            }
 
         out += """
 <div class="webcomment_comment_box">
@@ -475,6 +495,7 @@ class Template:
             %(title)s
             <div class="webcomment_comment_date">%(date)s</div>
             <a class="webcomment_permalink" title="Permalink to this comment" href="#C%(comid)i">¶</a>
+            %(associated_file_element)s
         </div>
         <div class="collapsible_content" id="collapsible_content_%(comid)i" style="%(collapsible_content_style)s">
             <div class="webcomment_comment_body">
@@ -497,10 +518,17 @@ class Template:
                  'comid': com_id,
                  'collapsible_content_style': collapsed_p and 'display:none' or '',
                  'toggle_visibility_block': toggle_visibility_block,
+                 'associated_file_element': associated_file_element
                  }
         return out
 
-    def tmpl_get_comment_with_ranking(self, req, ln, nickname, comment_uid, date_creation, body, body_format, status, nb_reports, nb_votes_total, nb_votes_yes, star_score, title, report_link=None, delete_links=None, undelete_link=None, unreport_link=None, recID=-1):
+    def tmpl_get_comment_with_ranking(self, req, ln, nickname, comment_uid,
+                                      date_creation, body,  body_format, status,
+                                      nb_reports, nb_votes_total,
+                                      nb_votes_yes, star_score, title,
+                                      report_link=None, delete_links=None,
+                                      undelete_link=None, unreport_link=None,
+                                      recID=-1, associated_files = None):
         """
         private function
         @param req: request object to fetch user info
@@ -584,10 +612,24 @@ class Template:
             else:
                 _body = '<div class="webcomment_review_pending_approval_message">This review is pending approval due to user reports.</div>'
                 links = ''
+        associated_file_element = ''
+        if associated_files and associated_files.get(com_id):
+            file = associated_files[com_id]
+            associated_file_element = """
+             <div class="cmt_file_association" doc_code="%(id_bibdoc)s:%(version)s" style="float:right">
+              This comment is associate with file %(docname)s, version %(version)s
+             </div>
+            """ % {
+                'docname': file['docname'],
+                'version': file['version'],
+                'id_bibdoc': file['id_bibdoc']
+            }
+
 
         out += '''
 <div class="webcomment_review_box">
   <div class="webcomment_review_box_inner">
+    %(associated_file_element)s
     <img src="%(baseurl)s/img/%(star_score_img)s" alt="%(star_score)s/>
       <div class="webcomment_review_title">%(title)s</div>
       <div class="webcomment_review_label_reviewed">%(reviewed_label)s</div>
@@ -602,7 +644,8 @@ class Template:
                'reviewed_label': reviewed_label,
                'useful_label'  : useful_label,
                'body'          : _body,
-               'abuse'         : links
+               'abuse'         : links,
+               'associated_file_element' : associated_file_element
                }
         return out
 
@@ -621,7 +664,8 @@ class Template:
                           user_is_subscribed_to_discussion=False,
                           user_can_unsubscribe_from_discussion=False,
                           display_comment_rounds=None,
-                          filter_for_results=None):
+                          filter_for_results=None,
+                          associated_files=None):
         """
         Get table of all comments
         @param recID: record id
@@ -861,14 +905,29 @@ class Template:
                     delete_links['auth'] = "%s/admin/webcomment/webcommentadmin.py/del_single_com_auth?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     undelete_link = "%s/admin/webcomment/webcommentadmin.py/undel_com?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     unreport_link = "%s/admin/webcomment/webcommentadmin.py/unreport_com?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
-                    comments_rows += self.tmpl_get_comment_without_ranking(req, ln, messaging_link, comment[c_user_id], comment[c_date_creation], comment[c_body], comment[c_body_format], comment[c_status], comment[c_nb_reports], reply_link, report_link, undelete_link, delete_links, unreport_link, recID, comment[c_id], files, comment[c_visibility])
+                    comments_rows += self.tmpl_get_comment_without_ranking(req, ln, messaging_link, comment[c_user_id],
+                                                                           comment[c_date_creation], comment[c_body], comment[c_body_format],
+                                                                           comment[c_status], comment[c_nb_reports],
+                                                                           reply_link, report_link, undelete_link,
+                                                                           delete_links, unreport_link,
+                                                                           recID, comment[c_id], files,
+                                                                           comment[c_visibility],
+                                                                           associated_files=associated_files)
                 else:
                     report_link = '%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/reviews/report?ln=%(ln)s&amp;comid=%%(comid)s&amp;do=%(do)s&amp;ds=%(ds)s&amp;nb=%(nb)s&amp;p=%(p)s&amp;referer=%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/reviews/display' % useful_dict % {'comid': comment[c_id]}
                     delete_links['mod'] = "%s/admin/webcomment/webcommentadmin.py/del_single_com_mod?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     delete_links['auth'] = "%s/admin/webcomment/webcommentadmin.py/del_single_com_auth?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     undelete_link = "%s/admin/webcomment/webcommentadmin.py/undel_com?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     unreport_link = "%s/admin/webcomment/webcommentadmin.py/unreport_com?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
-                    comments_rows += self.tmpl_get_comment_with_ranking(req, ln, messaging_link, comment[c_user_id], comment[c_date_creation], comment[c_body], comment[c_body_format], comment[c_status], comment[c_nb_reports], comment[c_nb_votes_total], comment[c_nb_votes_yes], comment[c_star_score], comment[c_title], report_link, delete_links, undelete_link, unreport_link, recID)
+                    comments_rows += self.tmpl_get_comment_with_ranking(req, ln, messaging_link, comment[c_user_id],
+                                                                        comment[c_date_creation], comment[c_body], comment[c_body_format],
+                                                                        comment[c_status], comment[c_nb_reports],
+                                                                        comment[c_nb_votes_total],
+                                                                        comment[c_nb_votes_yes],
+                                                                        comment[c_star_score], comment[c_title],
+                                                                        report_link, delete_links, undelete_link,
+                                                                        unreport_link, recID,
+                                                                        associated_files=associated_files)
                     helpful_label = _("Was this review helpful?")
                     report_abuse_label = "(" + _("Report abuse") + ")"
                     yes_no_separator = '<td> / </td>'
@@ -2692,80 +2751,125 @@ class Template:
         # load the right message language
         _ = gettext_set_language(ln)
 
-        filter_all_comments_url = '/record/%(recID)s/comments/display?ln=%(ln)s&nb=%(nb)s&filter=' \
+        files = get_bibdocfiles_of_record(recID, only_used_p=True)
+        files = json.dumps(files).replace('\"', '\'')
+        filter_comments_url = '/record/%(recID)s/comments/display?ln=%(ln)s&filter=' \
                 % {
                     'recID'        : recID,
-                    'ln'           : ln,
-                    'nb'           : total_nb
+                    'ln'           : ln
                   }
 
-
+        select_element_with_files = self.tmpl_bibdocfile_selector_element(recID, only_optgroup_elements_p=True)
+        """        <input id="filter_input" placeholder="%(filter_placeholder)s" style="margin-left: auto; width: 300px; height: 20px; font-size: 120%%;" />
+        """
         filter_element = """
+        <script src='https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.9.0/js/standalone/selectize.min.js'></script>
+        <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.9.0/css/selectize.default.css' type='text/css'/>
         <div id="filter_area" style="float:right">
         <label style="margin-right:15px;">%(filter_label)s</label>
         <input id="filter_input" placeholder="%(filter_placeholder)s" style="margin-left: auto; width: 300px; height: 20px; font-size: 120%%;" />
+        <br />
+        <select id="selectize_input" style="margin-left: auto; width: 300px; height: 20px; font-size: 120%%;">
+        <option value="">Select a file to filter comments</option>
+        %(search_input)s
+        </select>
         <br /><label id="matching_comments_number"></label>
         </div>
         <style>
+        .selectize-control { float:right;}
         .highlight { background-color: yellow; }
         </style>
         <script type="text/javascript">
 
+        function getParameterByName(name) {
+            var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+            return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+        }
+
+        var $select = $('#selectize_input').selectize({
+            plugins: ['remove_button'],
+            delimiter:',',
+            persist: false,
+            hideSelected: true,
+            onChange : filter
+            });
+        var selectize = $select[0].selectize;
         /* debounce http://benalman.com/projects/jquery-throttle-debounce-plugin/ */
         (function(b,c){var $=b.jQuery||b.Cowboy||(b.Cowboy={}),a;$.throttle=a=function(e,f,j,i){var h,d=0;if(typeof f!=="boolean"){i=j;j=f;f=c}function g(){var o=this,m=+new Date()-d,n=arguments;function l(){d=+new Date();j.apply(o,n)}function k(){h=c}if(i&&!h){l()}h&&clearTimeout(h);if(i===c&&m>e){l()}else{if(f!==true){h=setTimeout(i?k:l,i===c?e-m:e)}}}if($.guid){g.guid=j.guid=j.guid||$.guid++}return g};$.debounce=function(d,e,f){return f===c?a(d,e,false):a(d,f,e!==false)}})(this);
 
         /* highlighting http://johannburkard.de/blog/programming/javascript/highlight-javascript-text-higlighting-jquery-plugin.html */
         jQuery.fn.highlight=function(c){function e(b,c){var d=0;if(3==b.nodeType){var a=b.data.toUpperCase().indexOf(c);if(0<=a){d=document.createElement("span");d.className="highlight";a=b.splitText(a);a.splitText(c.length);var f=a.cloneNode(!0);d.appendChild(f);a.parentNode.replaceChild(d,a);d=1}}else if(1==b.nodeType&&b.childNodes&&!/(script|style)/i.test(b.tagName))for(a=0;a<b.childNodes.length;++a)a+=e(b.childNodes[a],c);return d}return this.length&&c&&c.length?this.each(function(){e(this,c.toUpperCase())}): this};jQuery.fn.removeHighlight=function(){return this.find("span.highlight").each(function(){this.parentNode.firstChild.nodeName;with(this.parentNode)replaceChild(this.firstChild,this),normalize()}).end()};
 
-        var filter_all_url = "%(filter_all_comments_url)s";
-        $( "#filter_input" ).keyup($.debounce( 250, function() {
+        /* add icontains to jquery selector expression */
+        jQuery.expr[':'].icontains = function(a, i, m) {
+         return jQuery(a).text().toUpperCase()
+         .indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        var filter_all_url = "%(filter_comments_url)s";
+        var current_page = parseInt(getParameterByName('p'));
+        $( "#filter_input" ).keyup($.debounce( 250, filter))
+        function filter() {
           comments = $(".collapsible_content").children().not(".webcomment_comment_options")
+          var query = ''
           query = $("#filter_input").val().toLowerCase()
-          $("#all_comments_anchor").attr("href",filter_all_url+query)
+          file_query = "@file_filter:" + $("#selectize_input").val()
+          $("#all_comments_anchor").attr("href",filter_all_url+query+file_query)
           comments.removeHighlight()
           $("#search_next_page").remove()
-          if (query == "")
-          {
-            comments.parent().parent().parent().show(300)
-            $("#matching_comments_number").hide(300)
+          $("#matching_comments_number").hide(300)
+          comment_count = 0
+          console.log(query);
+          if (query == "" && $("#selectize_input").val()== ""){
+            comments.parent().parent().parent().show(300);
             return;
           }
 
-          comment_count = 0
-          for (i in comments)
-          {
-            if ( !$.isEmptyObject(comments[i].textContent))
-            {
-                if ( comments[i].textContent.toLowerCase().indexOf(query) == -1)
-                {
-                    $(comments[i]).parent().parent().parent().hide(300);
-                }
-                else
-                {
-                    comment_count++
-                    $(comments[i]).highlight(query).parent().parent().parent().show(300);
-                }
-            }
+          if (query != "" && $("#selectize_input").val()== ""){
+            comment_count = $(".collapsible_content").children().not(".webcomment_comment_options")
+            .filter(":icontains('" + query + "')").highlight(query).parent().parent().parent().show(300).length;
+            $(".collapsible_content").children().not(".webcomment_comment_options")
+            .filter(":not(:icontains('" + query + "'))").parent().parent().parent().hide(300);
+          }
+
+          if ($("#selectize_input").val()!= ""){
+              file_association = $(".cmt_file_association").not( "[doc_code='" + $("#selectize_input").val() + "']" )
+              unassociated_comments = $(".webcomment_comment_title:not(:has(.cmt_file_association))");
+              $(file_association.parent().parent().parent()).add(unassociated_comments.parent().parent()).hide(300);
+              $(".cmt_file_association[doc_code='" + $("#selectize_input").val() + "']").parent().parent()
+              .find(".collapsible_content").children().not(".webcomment_comment_options")
+              .filter(":not(:icontains('" + query + "'))").parent().parent().parent().hide(300);
+              comment_count = $(".cmt_file_association[doc_code='" + $("#selectize_input").val() + "']").parent().parent()
+              .find(".collapsible_content").children().not(".webcomment_comment_options")
+              .filter(":icontains('" + query + "')").highlight(query).parent().parent().parent().show(300).length;
           }
           $("#matching_comments_number").text("Matching comments: "+comment_count)
           $("#matching_comments_number").show(300)
 
           if (%(has_more_pages)s)
           {
-
-            $("#cmtRound").append("<div id='search_next_page' style='text-align:center'><a id='search_all_authors_anchor' align='center' style='font-size:18px;margin-left:auto;margin-right:auto;' href='"+filter_all_url+query+"'>Click here to search the comments of the next page<a></div>")
+            var p = 2;
+            if (!isNaN(current_page)){
+            p = current_page+1;
+            }
+            $("#cmtRound").append("<div id='search_next_page' style='text-align:center'><a id='search_all_authors_anchor' align='center' style='font-size:18px;margin-left:auto;margin-right:auto;' href='"+filter_all_url+query+file_query+"&p="+ p +"'>Click here to search the comments of the next page<a></div>")
           }
 
-          }));
+          };
           $(function() {
              if (%(has_more_pages)s)
              {
-                $("#filter_area").append("<br /><a id='all_comments_anchor' style='font-size:13px' href='%(filter_all_comments_url)s%(filter_query)s'>Use this filter for all record's comments</a>")
+                $("#filter_area").append("<br /><a id='all_comments_anchor' style='font-size:13px' href='%(filter_comments_url)s%(filter_query)s&nb=%(nb)s'>Use this filter for all record's comments</a>")
              }
 
              if ("%(filter_query)s")
              {
-                $("#filter_input").val("%(filter_query)s")
+                query = "%(filter_query)s".split("@file_filter:")
+                $("#filter_input").val(query[0])
+                if (query.length > 1)
+                {
+                    selectize.setValue(query[1])
+                }
                 $("#filter_input").trigger( "keyup" )
              }
             });
@@ -2777,56 +2881,70 @@ class Template:
                'filter_placeholder'      : _('filter comments in this page'),
                'filter_label'            : _('Filter') + ':&nbsp;',
                'filter_query'            : filter_query,
-               'filter_all_comments_url' : filter_all_comments_url
+               'filter_comments_url' : filter_comments_url,
+               'search_input'            : select_element_with_files,
+               'nb'           : total_nb
                }
 
         return filter_element
 
-    def tmpl_bibdocfile_selector_element(self, recID):
+    def tmpl_bibdocfile_selector_element(self, recID, only_optgroup_elements_p=False):
         """
         Creates a selector element for bibdocfiles of a record
         @param recID: Id of the record
         """
-        files = get_bibdocfiles_of_record(recID)
+        files = get_bibdocfiles_of_record(recID, only_optgroup_elements_p)
         optgroups_html = ''
         optgroups = {}
 
         ## group files in a dictionary using the file name as a key
         for file in files:
             if not optgroups.get(file['docname']):
-                optgroups[file['docname']] =[]
+                optgroups[file['docname']] = []
             optgroups[file['docname']].append(file)
 
         ## construct the optgroups to be displayed
         for key, values in optgroups.iteritems():
             optgroups_html += """<optgroup label="%s">""" % key
-            for value in values:
+            for file in values:
                 optgroups_html += \
-                """<option value="%(bibdocfileID)s:%(version)s:%(mime)s">Version %(version)s, Mime %(mime)s</option>""" \
-                                  % {'version': value['version'],
-                                     'mime': value['mime'],
-                                     'bibdocfileID': value['id_bibdoc']
-                                    }
-            optgroups_html += "</optgroup>"
+                """<option value="%(bibdocfileID)s:%(version)s">%(docname)s, Version %(version)s</option>""" \
+                                % {
+                                     'version': file['version'],
+                                     'bibdocfileID': file['id_bibdoc'],
+                                     'docname' : key
+                                }
 
-        file_selection_element = """
-        <div style="float:right">
-            <select id="file_selector">
-              %s
-            </select>
-        </div>
+            optgroups_html += "</optgroup>"
+        if only_optgroup_elements_p:
+            return optgroups_html
+
+        script_element = """
         <script>
         $(function(){
+             $("#file_selector").prop("selectedIndex", -1);
              $("#file_selector").change(function() {
                  $('input[name="associated_file"]').attr('value',$( "#file_selector option:selected" ).attr('value'));
               });
         $( "#file_selector option:selected" ).text();
         });
         </script>
+        """
+
+        file_selection_element = """
+        <div style="float:right">
+            <select id="file_selector">
+              %(optgroup_html)s
+            </select>
+        </div>
+        %(script_element)s
         <div style="clear:both"></div>
-        """ % optgroups_html
-        
-        return file_selection_element  
+        """ % {
+            'optgroup_html': optgroups_html,
+            'script_element': script_element
+        }
+       
+        return file_selection_element
     
     
     def tmpl_prepare_comment_body(self, body, body_format, output_format):
