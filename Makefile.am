@@ -241,6 +241,10 @@ uninstall-jquery-plugins:
 	rm -f jquery.dataTables.min.js && \
 	rm -f ui.core.js && \
 	rm -f jquery.bookmark.min.js && \
+	rm -f handlebars.min.js && \
+	rm -f typeahead.bundle.min.js && \
+	rm -f es5-shim.min.js && \
+	rm -f es5-shim.map && \
 		rm -f jquery.dataTables.ColVis.min.js && \
         rm -f jquery.hotkeys.js && \
         rm -f jquery.tablesorter.min.js && \
