@@ -19,6 +19,7 @@
 ## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """ Comments and reviews for records: web interface """
+from docutils.nodes import note
 
 __lastupdated__ = """$Date$"""
 
@@ -304,7 +305,8 @@ class WebInterfaceCommentsPages(WebInterfaceDirectory):
                                    'comid': (int, 0),
                                    'editor_type': (str, ""),
                                    'subscribe': (str, ""),
-                                   'cookie': (str, "")
+                                   'cookie': (str, ""),
+                                   'editors_response' : (str, "")
                                    })
         _ = gettext_set_language(argd['ln'])
 
@@ -485,13 +487,15 @@ class WebInterfaceCommentsPages(WebInterfaceDirectory):
                get_user_subscription_to_discussion(self.recid, uid) == 0:
                 # User is not already subscribed, and asked to subscribe
                 subscribe = True
-
+            note = argd['note']
+            if argd['editors_response']:
+                note = argd['editors_response']
             body = perform_request_add_comment_or_remark(recID=self.recid,
                                                          ln=argd['ln'],
                                                          uid=uid,
                                                          action=argd['action'],
                                                          msg=argd['msg'],
-                                                         note=argd['note'],
+                                                         note=note,
                                                          score=argd['score'],
                                                          reviews=self.discussion,
                                                          comID=argd['comid'],

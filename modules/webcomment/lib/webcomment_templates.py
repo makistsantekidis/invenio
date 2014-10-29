@@ -84,8 +84,8 @@ class Template:
         c_user_id = 1
         c_date_creation = 2
         c_body = 3
-        c_id = 6
-        c_body_format = 10
+        c_id = 7
+        c_body_format = 11
 
         warnings = self.tmpl_warnings(warnings, ln)
 
@@ -356,7 +356,7 @@ class Template:
                            write_button_form)
         return out
 
-    def tmpl_get_comment_without_ranking(self, req, ln, nickname, comment_uid, date_creation, body, body_format, status, nb_reports, reply_link=None, report_link=None, undelete_link=None, delete_links=None, unreport_link=None, recID=-1, com_id='', attached_files=None, collapsed_p=False):
+    def tmpl_get_comment_without_ranking(self, req, ln, nickname, comment_uid, date_creation, body, body_format, status, nb_reports, cmt_title, reply_link=None, report_link=None, undelete_link=None, delete_links=None, unreport_link=None, recID=-1, com_id='', attached_files=None, collapsed_p=False):
         """
         private function
         @param req: request object to fetch user info
@@ -464,11 +464,14 @@ class Template:
                                      'toggle_url': create_url(CFG_SITE_URL + '/' + CFG_SITE_RECORD + '/' + str(recID) + '/comments/toggle', {'comid': com_id, 'ln': ln, 'collapse': collapsed_p and '0' or '1', 'referer': user_info['uri']}),
                                      'collapse_ctr_class': collapsed_p and 'webcomment_collapse_ctr_right' or 'webcomment_collapse_ctr_down',
                                      'collapse_label': collapsed_p and _("Open") or _("Close")}
-
+        title_element = ""
+        if cmt_title:
+            title_element = """<div> %s </div>""" % (cmt_title)
         out += """
 <div class="webcomment_comment_box">
     %(toggle_visibility_block)s
     <div class="webcomment_comment_avatar"><img class="webcomment_comment_avatar_default" src="%(site_url)s/img/user-icon-1-24x24.gif" alt="avatar" /></div>
+    %(title_element)s
     <div class="webcomment_comment_content">
         <div class="webcomment_comment_title">
             %(title)s
@@ -496,6 +499,7 @@ class Template:
                  'comid': com_id,
                  'collapsible_content_style': collapsed_p and 'display:none' or '',
                  'toggle_visibility_block': toggle_visibility_block,
+                 'title_element': title_element
                  }
         return out
 
@@ -697,12 +701,13 @@ class Template:
             c_body = 3
             c_status = 4
             c_nb_reports = 5
-            c_id = 6
-            c_round_name = 7
-            c_restriction = 8
-            reply_to = 9
-            c_body_format = 10
-            c_visibility = 11
+            c_title = 6
+            c_id = 7
+            c_round_name = 8
+            c_restriction = 9
+            reply_to = 10
+            c_body_format = 11
+            c_visibility = 12
             discussion = 'comments'
             comments_link = '<b>%s (%i)</b>' % (_('Comments'), total_nb_comments)
             reviews_link = '<a href="%s/%s/%s/reviews/">%s</a> (%i)' % (CFG_SITE_URL, CFG_SITE_RECORD, recID, _('Reviews'), total_nb_reviews)
@@ -859,7 +864,7 @@ class Template:
                     delete_links['auth'] = "%s/admin/webcomment/webcommentadmin.py/del_single_com_auth?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     undelete_link = "%s/admin/webcomment/webcommentadmin.py/undel_com?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
                     unreport_link = "%s/admin/webcomment/webcommentadmin.py/unreport_com?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
-                    comments_rows += self.tmpl_get_comment_without_ranking(req, ln, messaging_link, comment[c_user_id], comment[c_date_creation], comment[c_body], comment[c_body_format], comment[c_status], comment[c_nb_reports], reply_link, report_link, undelete_link, delete_links, unreport_link, recID, comment[c_id], files, comment[c_visibility])
+                    comments_rows += self.tmpl_get_comment_without_ranking(req, ln, messaging_link, comment[c_user_id], comment[c_date_creation], comment[c_body], comment[c_body_format], comment[c_status], comment[c_nb_reports], comment[c_title], reply_link, report_link, undelete_link, delete_links, unreport_link, recID, comment[c_id], files, comment[c_visibility])
                 else:
                     report_link = '%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/reviews/report?ln=%(ln)s&amp;comid=%%(comid)s&amp;do=%(do)s&amp;ds=%(ds)s&amp;nb=%(nb)s&amp;p=%(p)s&amp;referer=%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/reviews/display' % useful_dict % {'comid': comment[c_id]}
                     delete_links['mod'] = "%s/admin/webcomment/webcommentadmin.py/del_single_com_mod?ln=%s&amp;id=%s" % (CFG_SITE_URL, ln, comment[c_id])
@@ -1281,7 +1286,10 @@ class Template:
              'nb_files_limit_msg': _("Max one file") and CFG_WEBCOMMENT_MAX_ATTACHED_FILES == 1 or \
                               _("Max %i files") % CFG_WEBCOMMENT_MAX_ATTACHED_FILES,
              'file_size_limit_msg': CFG_WEBCOMMENT_MAX_ATTACHMENT_SIZE > 0 and _("Max %(x_nb_bytes)s per file") % {'x_nb_bytes': (CFG_WEBCOMMENT_MAX_ATTACHMENT_SIZE < 1024*1024 and (str(CFG_WEBCOMMENT_MAX_ATTACHMENT_SIZE/1024) + 'KB') or  (str(CFG_WEBCOMMENT_MAX_ATTACHMENT_SIZE/(1024*1024)) + 'MB'))} or ''}
-
+        editors_response_checkbox = ''
+        if CFG_CERN_SITE or True: #TODO: Check if user is editor
+            editors_response_checkbox = """<input type="checkbox" name="editors_response" value="Editor's response">Post comment as "Editor's response"<br>"""
+    
         if CFG_CERN_SITE:
              editor = get_html_text_editor(name='msg',
                                           content=msg,
@@ -1313,6 +1321,7 @@ class Template:
 
 %(editor)s
 <br />
+%(editors_response_checkbox)s
 %(simple_attach_file_interface)s
                   <span class="reportabuse">%(note)s</span>
                   <div class="submit-area">
@@ -1328,7 +1337,8 @@ class Template:
                        'editor': editor,
                        'subscribe_to_discussion': subscribe_to_discussion,
                        'reply_to': reply_to and '<input type="hidden" name="comid" value="%s"/>' % reply_to or '',
-                       'simple_attach_file_interface': simple_attach_file_interface}
+                       'simple_attach_file_interface': simple_attach_file_interface,
+                       'editors_response_checkbox': editors_response_checkbox}
         form_link = "%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/comments/%(function)s?%(arguments)s" % link_dic
         form = self.create_write_comment_hiddenform(action=form_link, method="post", text=form, button='Add comment',
                                                     enctype='multipart/form-data', form_id='cmtForm',
