@@ -438,7 +438,7 @@ class Template:
 
         toggle_visibility_block = ''
         if not isGuestUser(user_info['uid']):
-            toggle_visibility_block = """<div class="webcomment_toggle_visibility"><a id="collapsible_ctr_%(comid)s" class="%(collapse_ctr_class)s" href="%(toggle_url)s" onclick="return toggle_visibility(this, %(comid)i);" title="%(collapse_label)s"><span style="display:none">%(collapse_label)s</span></a></div>""" % \
+            toggle_visibility_block = """<div class="webcomment_toggle_visibility"><a id="collapsible_ctr_%(comid)s" data-id="%(comid)s" class="%(collapse_ctr_class)s" href="%(toggle_url)s" onclick="return toggle_visibility(this, %(comid)i);" title="%(collapse_label)s"><span style="display:none">%(collapse_label)s</span></a></div>""" % \
                                     {'comid': com_id,
                                      'toggle_url': create_url(CFG_SITE_URL + '/' + CFG_SITE_RECORD + '/' + str(recID) + '/comments/toggle', {'comid': com_id, 'ln': ln, 'collapse': collapsed_p and '0' or '1', 'referer': user_info['uri']}),
                                      'collapse_ctr_class': collapsed_p and 'webcomment_collapse_ctr_right' or 'webcomment_collapse_ctr_down',
@@ -629,6 +629,7 @@ class Template:
         # CERN hack begins: display full ATLAS user name. Check further below too.
         current_user_fullname = ""
         override_nickname_p = False
+
         if CFG_CERN_SITE:
             from invenio.search_engine import get_all_collections_of_a_record
             user_info = collect_user_info(uid)
@@ -928,9 +929,42 @@ class Template:
         elif reviews == 1 and total_nb_reviews == 0 and can_send_comments:
             review_or_comment_first = _("Be the first to review this document.") + '<br />'
 
-        # do NOT remove the HTML comments below. Used for parsing
+
+
+        toggle_all_comment_visibility = """
+                                            <a class="toggle_all_comment_visibility" data-collapse="0">   show all comments</a>
+                                           <a class="toggle_all_comment_visibility" data-collapse="1">  hide all comments</a>
+                                           <script>
+                                         $(document).ready(function(){
+
+                                                        $('.toggle_all_comment_visibility').on('click', function(){
+                                                            var type = $(this).data('collapse');
+
+                                                            $.ajax({
+                                                                url: '%(siteurl)s/%(CFG_SITE_RECORD)s/%(recID)s/comments/toggle_all',
+                                                                data:{
+                                                                    collapse: type
+                                                                }
+                                                            })
+                                                            .done(function(){
+                                                                location.reload();
+                                                            })
+                                                            .error(function(){
+                                                            alert("There was an error please retry and if the error persists contact the administrators.")
+                                                            })
+                                                        });
+                                                    });
+                                           </script>
+        """ % { 'siteurl' : CFG_SITE_URL,
+                'CFG_SITE_RECORD':  CFG_SITE_RECORD,
+                 'recID': recID}
+
+
+
+# do NOT remove the HTML comments below. Used for parsing
         body = '''
 %(comments_and_review_tabs)s
+%(toggle_all_comment_visibility)s
 <!-- start comments table -->
 <div class="webcomment_comment_table">
   %(comments_rows)s
@@ -957,7 +991,8 @@ class Template:
                                        CFG_WEBCOMMENT_ALLOW_COMMENTS and \
                                        '%s | %s <br />' % \
                                        (comments_link, reviews_link) or '',
-            'review_or_comment_first'   : review_or_comment_first
+            'review_or_comment_first'   : review_or_comment_first,
+            'toggle_all_comment_visibility' : toggle_all_comment_visibility
         }
 
         # form is not currently used. reserved for an eventual purpose

@@ -2057,6 +2057,29 @@ def toggle_comment_visibility(uid, comid, collapse, recid):
     # when deleting an entry, as in the worst case no line would be
     # removed. For optimized retrieval of row to delete, the id_bibrec
     # column is used, though not strictly necessary.
+
+    from itertools import chain
+
+    if comid == "all":
+        
+        if collapse:
+            query = """SELECT id from cmtRECORDCOMMENT where id_bibrec=%s"""
+            params = (recid,)
+            res = run_sql(query, params)
+            if res:
+                query = """INSERT DELAYED IGNORE INTO cmtCOLLAPSED (id_bibrec, id_cmtRECORDCOMMENT, id_user)
+                                  VALUES %s""" % ','.join(len(res)*["""(%s, %s, %s)"""])
+                params = list(chain.from_iterable([(recid, cmt[0], uid) for cmt in res]))
+                run_sql(query, params)
+            return True
+        else:
+            query = """DELETE FROM cmtCOLLAPSED WHERE
+                        id_user=%s and
+                        id_bibrec=%s"""
+            params = (uid, recid)
+            run_sql(query, params)
+            return True
+
     if collapse:
         query = """SELECT id_bibrec from cmtRECORDCOMMENT WHERE id=%s"""
         params = (comid,)

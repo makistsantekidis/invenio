@@ -89,12 +89,13 @@ from invenio.bibdocfile import \
      stream_file, \
      decompose_file, \
      propose_next_docname
+import json
 
 class WebInterfaceCommentsPages(WebInterfaceDirectory):
     """Defines the set of /comments pages."""
 
     _exports = ['', 'display', 'add', 'vote', 'report', 'index', 'attachments',
-                'subscribe', 'unsubscribe', 'toggle']
+                'subscribe', 'unsubscribe', 'toggle', 'toggle_all']
 
     def __init__(self, recid=-1, reviews=0):
         self.recid = recid
@@ -752,6 +753,27 @@ class WebInterfaceCommentsPages(WebInterfaceDirectory):
             return redirect_to_url(req, CFG_SITE_SECURE_URL + \
                                    (not argd['referer'].startswith('/') and '/' or '') + \
                                    argd['referer'] + '#' + str(argd['comid']))
+
+
+    def toggle_all(self, req, form):
+        argd = wash_urlargd(form, {'collapse': (int, 1)})
+
+        uid = getUid(req)
+
+        if isGuestUser(uid):
+            # We do not store information for guests
+            return ''
+
+        toggle_comment_visibility(uid, "all", argd['collapse'], self.recid)
+        response = {
+            "success": "true",
+            "message": "Collapse done"
+        }
+        return json.dumps(response)
+
+        # return redirect_to_url(req, CFG_SITE_SECURE_URL + \
+        #                            (not argd['referer'].startswith('/') and '/' or '') + \
+        #                            argd['referer'])
 
 class WebInterfaceCommentsFiles(WebInterfaceDirectory):
     """Handle <strike>upload and </strike> access to files for comments.
